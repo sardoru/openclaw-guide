@@ -2,7 +2,7 @@
 
 **17-phase guide that transforms a vanilla OpenClaw install into a self-improving, security-hardened, operationally proactive AI agent system.**
 
-Built by Sardor Umarov. Working implementation at PFICO. Battle-tested Feb–Apr 2026.
+Built by Sardor Umarov. Working implementation at PFICO. Battle-testing since February 2026 — continuously evolving, so check back for the latest version.
 
 ---
 
@@ -137,4 +137,4 @@ Private. Not for redistribution without permission.
 
 ---
 
-*Built by Sardor Umarov. Working implementation at PFICO.*
+*Built by Sardor Umarov. Working implementation at PFICO. Battle-testing since February 2026.*
