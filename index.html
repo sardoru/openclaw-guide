@@ -392,9 +392,9 @@
 
 <noscript>
 <style>
-  .phase-body { max-height: 50000px !important; }
+  .phase-body { max-height: 50000px !important; overflow: visible !important; }
   .phase { opacity: 1 !important; transform: none !important; }
-  .export-btn, .copy-btn, .phase-copy-btn { display: none !important; }
+  .export-btn, .copy-btn, .phase-copy-btn, .phase-chevron { display: none !important; }
 </style>
 </noscript>
 </head>
@@ -504,7 +504,7 @@
 </div>
 
 <!-- ═══════════════ PHASE 1 ═══════════════ -->
-<section class="phase open" id="phase1">
+<section class="phase" id="phase1">
   <div class="phase-header" onclick="togglePhase(this)">
     <div class="phase-number">1</div>
     <div class="phase-title-block">
@@ -647,7 +647,7 @@ echo "Created stub: $LOG_FILE"</code></pre>
 </section>
 
 <!-- ═══════════════ PHASE 2 ═══════════════ -->
-<section class="phase open" id="phase2">
+<section class="phase" id="phase2">
   <div class="phase-header" onclick="togglePhase(this)">
     <div class="phase-number">2</div>
     <div class="phase-title-block">
@@ -696,7 +696,7 @@ cd /path/to/workspace/tools/vector-memory && source venv/bin/activate && python3
 </section>
 
 <!-- ═══════════════ PHASE 3 ═══════════════ -->
-<section class="phase open" id="phase3">
+<section class="phase" id="phase3">
   <div class="phase-header" onclick="togglePhase(this)">
     <div class="phase-number">3</div>
     <div class="phase-title-block">
@@ -713,7 +713,7 @@ cd /path/to/workspace/tools/vector-memory && source venv/bin/activate && python3
 </section>
 
 <!-- ═══════════════ PHASE 4 ═══════════════ -->
-<section class="phase open" id="phase4">
+<section class="phase" id="phase4">
   <div class="phase-header" onclick="togglePhase(this)">
     <div class="phase-number">4</div>
     <div class="phase-title-block">
@@ -766,7 +766,7 @@ cd /path/to/workspace/tools/vector-memory && source venv/bin/activate && python3
 </section>
 
 <!-- ═══════════════ PHASE 5 ═══════════════ -->
-<section class="phase open" id="phase5">
+<section class="phase" id="phase5">
   <div class="phase-header" onclick="togglePhase(this)">
     <div class="phase-number">5</div>
     <div class="phase-title-block">
@@ -834,7 +834,7 @@ openclaw cron add \
 </section>
 
 <!-- ═══════════════ PHASE 6 ═══════════════ -->
-<section class="phase open" id="phase6">
+<section class="phase" id="phase6">
   <div class="phase-header" onclick="togglePhase(this)">
     <div class="phase-number">6</div>
     <div class="phase-title-block">
@@ -892,7 +892,7 @@ You are Forge, the meta-agent responsible for continuous improvement.
 </section>
 
 <!-- ═══════════════ PHASE 7 ═══════════════ -->
-<section class="phase open" id="phase7">
+<section class="phase" id="phase7">
   <div class="phase-header" onclick="togglePhase(this)">
     <div class="phase-number">7</div>
     <div class="phase-title-block">
@@ -908,7 +908,7 @@ You are Forge, the meta-agent responsible for continuous improvement.
 </section>
 
 <!-- ═══════════════ PHASE 8 ═══════════════ -->
-<section class="phase open" id="phase8">
+<section class="phase" id="phase8">
   <div class="phase-header" onclick="togglePhase(this)">
     <div class="phase-number">8</div>
     <div class="phase-title-block">
@@ -937,7 +937,7 @@ You are Forge, the meta-agent responsible for continuous improvement.
 </section>
 
 <!-- ═══════════════ PHASE 9 ═══════════════ -->
-<section class="phase open" id="phase9">
+<section class="phase" id="phase9">
   <div class="phase-header" onclick="togglePhase(this)">
     <div class="phase-number">9</div>
     <div class="phase-title-block">
@@ -996,7 +996,7 @@ echo "brain-ingest: Processing $INPUT -> $VAULT_PATH/$CATEGORY/"</code></pre>
 </section>
 
 <!-- ═══════════════ PHASE 10 ═══════════════ -->
-<section class="phase open" id="phase10">
+<section class="phase" id="phase10">
   <div class="phase-header" onclick="togglePhase(this)">
     <div class="phase-number">10</div>
     <div class="phase-title-block">
@@ -1037,7 +1037,7 @@ echo "brain-ingest: Processing $INPUT -> $VAULT_PATH/$CATEGORY/"</code></pre>
 </section>
 
 <!-- ═══════════════ PHASE 11 ═══════════════ -->
-<section class="phase open" id="phase11">
+<section class="phase" id="phase11">
   <div class="phase-header" onclick="togglePhase(this)">
     <div class="phase-number">11</div>
     <div class="phase-title-block">
@@ -1076,7 +1076,7 @@ Weekly or on-demand to review recent engineering work.
 </section>
 
 <!-- ═══════════════ PHASE 12 ═══════════════ -->
-<section class="phase open" id="phase12">
+<section class="phase" id="phase12">
   <div class="phase-header" onclick="togglePhase(this)">
     <div class="phase-number">12</div>
     <div class="phase-title-block">
@@ -1159,7 +1159,7 @@ sessions_spawn(task="[Evaluator prompt + contract + criteria]", mode="run")</cod
 </section>
 
 <!-- ═══════════════ PHASE 13 ═══════════════ -->
-<section class="phase open" id="phase13">
+<section class="phase" id="phase13">
   <div class="phase-header" onclick="togglePhase(this)">
     <div class="phase-number">13</div>
     <div class="phase-title-block">
@@ -1260,7 +1260,7 @@ Good lesson: "The nginx 'failed to bind' error on port 443 actually means a conf
 </section>
 
 <!-- ═══════════════ PHASE 14 ═══════════════ -->
-<section class="phase open" id="phase14">
+<section class="phase" id="phase14">
   <div class="phase-header" onclick="togglePhase(this)">
     <div class="phase-number">14</div>
     <div class="phase-title-block">
@@ -1276,7 +1276,7 @@ Good lesson: "The nginx 'failed to bind' error on port 443 actually means a conf
 </section>
 
 <!-- ═══════════════ PHASE 15 ═══════════════ -->
-<section class="phase open" id="phase15">
+<section class="phase" id="phase15">
   <div class="phase-header" onclick="togglePhase(this)">
     <div class="phase-number">15</div>
     <div class="phase-title-block">
@@ -1379,7 +1379,7 @@ Send summary to user via Telegram.</code></pre>
 </section>
 
 <!-- ═══════════════ PHASE 16 ═══════════════ -->
-<section class="phase open" id="phase16">
+<section class="phase" id="phase16">
  <div class="phase-header" onclick="togglePhase(this)">
  <div class="phase-number">16</div>
  <div class="phase-title-block">
@@ -1518,7 +1518,7 @@ Agent Session (on demand)
 </section>
 
 <!-- ═══════════════ PHASE 17 ═══════════════ -->
-<section class="phase open" id="phase17">
+<section class="phase" id="phase17">
  <div class="phase-header" onclick="togglePhase(this)">
  <div class="phase-number">17</div>
  <div class="phase-title-block">
@@ -1802,13 +1802,6 @@ function togglePhase(header) {
   phase.classList.toggle('open');
 }
 
-// In full browsers, collapse all phases on load (they default open for no-JS viewers)
-// Only collapse if JS event handlers are working
-try {
-  document.querySelectorAll('.phase.open').forEach(p => p.classList.remove('open'));
-} catch(e) {
-  // If this fails, phases stay open — that's fine
-}
 
 // COPY CODE
 function copyCode(btn) {
