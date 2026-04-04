@@ -1,6 +1,6 @@
 # OpenClaw Production Upgrades — Implementation Guide
 
-**16-phase guide that transforms a vanilla OpenClaw install into a self-improving, operationally proactive AI agent system.**
+**17-phase guide that transforms a vanilla OpenClaw install into a self-improving, security-hardened, operationally proactive AI agent system.**
 
 Built by Sardor Umarov. Working implementation at PFICO. Battle-tested Feb–Apr 2026.
 
@@ -16,6 +16,7 @@ A single-file interactive HTML guide (`index.html`) documenting every upgrade ma
 - Manages your day before you wake up (task prep, email triage, calendar sync)
 - Builds software with quality gates (multi-agent GAN-inspired harness)
 - Scans physical mail with AI vision (OCR categorization pipeline)
+- Defends against prompt injection with 6 independent security layers
 
 ## Phases
 
@@ -37,12 +38,24 @@ A single-file interactive HTML guide (`index.html`) documenting every upgrade ma
 | 14 | Physical Mail Intake *(Optional)* | Intelligence | Camera → OCR → auto-categorize physical mail into digital shelves |
 | 15 | Failure Traces & Meta-Agent Review | Intelligence | Root cause logging, generalizability scoring, weekly self-improvement loop |
 | 16 | Canonical Tasks, Daily Prep & Email Sweep | Operations | One task file, 6am prep cron, proactive Gmail triage with follow-up detection |
+| 17 | Security Hardening | Security | 6-layer prompt injection defense: sanitizer, LLM scanner, outbound gate, redaction, governance, access control |
+
+## Security Layers (Phase 17)
+
+| Layer | Name | Cost | What It Catches |
+|-------|------|------|----------------|
+| 1 | Text Sanitizer | Free, instant | Invisible Unicode, Cyrillic lookalikes, role markers, HTML entities, base64 |
+| 2 | Frontier Scanner | ~$0.001/call | Semantic injection via dedicated LLM classifier (GPT-4o-mini) |
+| 3 | Outbound Gate | Free, instant | Leaked API keys, internal paths, private IPs, markdown image exfiltration |
+| 4 | Redaction Pipeline | Free, instant | PII (phone, email, SSN, CC), API keys, sensitive file paths |
+| 5 | Runtime Governance | Free, instant | Spend caps ($15/5min), volume limits (200/10min), loop detection, duplicate caching |
+| 6 | Access Control | Free, instant | Path deny list (.env, .ssh, credentials), URL safety (block private IPs) |
 
 ## Features of the Guide
 
 - **Interactive HTML** — Collapsible phase sections, dark/light theme toggle, scroll progress bar
 - **Copy buttons** — Per-phase copy (as markdown) and full guide copy for agentic ingestion
-- **Phase navigation** — Grouped sticky nav bar (Foundation → Automation → Knowledge → Build Quality → Intelligence → Operations)
+- **Phase navigation** — Grouped sticky nav bar (Foundation → Automation → Knowledge → Build Quality → Intelligence → Operations → Security)
 - **Code blocks** — Syntax-highlighted with one-click copy for all bash commands, config files, and scripts
 - **Responsive** — Works on phone, tablet, and desktop
 - **Self-contained** — Single HTML file, no external dependencies, no build step
@@ -86,6 +99,7 @@ Click "Copy full guide as .md" in the hero section → paste into any AI chat or
 | Calendar Sync | iCal/Google Calendar URL import |
 | Dashboard | AIO (React + Vite + Vercel) |
 | Monitoring | Forge meta-agent + trace analysis |
+| Security | 6-layer defense (sanitizer + LLM scanner + outbound gate + redaction + governance + access control) |
 | Scheduling | OpenClaw cron system |
 
 ## Research Influences
@@ -94,14 +108,28 @@ Click "Copy full guide as .md" in the hero section → paste into any AI chat or
 - **AutoAgent** (Kevin Gu, 2026) — Failure traces, meta-agent review, model empathy, generalizability scoring
 - **clawchief** (Ryan Carson, 2026) — Canonical task list, daily prep cron, email sweep, proactive operations
 - **Anthropic Harness Design** — GAN-inspired build/verify separation for quality
+- **Berman Security Layers** (Matthew Berman, 2026) — 6-layer prompt injection defense, runtime governance, independent layer architecture
 
 ## File Structure
 
 ```
 openclaw-guide/
-├── index.html    # The complete interactive guide (single file)
+├── index.html    # The complete interactive guide (single file, 17 phases)
 └── README.md     # This file
 ```
+
+## Changelog
+
+### v2 (Apr 3, 2026)
+- Added Phase 16: Canonical Tasks, Daily Prep & Email Sweep
+- Added Phase 17: Security Hardening — 6-Layer Defense
+- Updated hero section with 8 feature points (was 6)
+- Removed cost summary section
+- Updated nav bar with Operations + Security tabs
+- Updated file map with tasks/, email-sweep, security tools
+
+### v1 (Apr 2, 2026)
+- Initial release: Phases 1-15
 
 ## License
 
