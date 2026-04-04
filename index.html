@@ -414,6 +414,7 @@
     <a href="#phase12" data-phases="phase12">Build Quality</a>
     <a href="#phase13" data-phases="phase13,phase14,phase15">Intelligence</a>
  <a href="#phase16" data-phases="phase16">Operations</a>
+ <a href="#phase17" data-phases="phase17">Security</a>
   </div>
 </div>
 
@@ -474,7 +475,7 @@
     </div>
     <div class="hero-meta">
       <span><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 110 16A8 8 0 018 0zm.5 4.5a.5.5 0 00-1 0v4a.5.5 0 00.25.43l2.5 1.5a.5.5 0 10.5-.86L8.5 8.14V4.5z"/></svg> ~6 weeks build</span>
-      <span><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M5.75 7.5a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5a.75.75 0 01.75-.75zm5.25.75a.75.75 0 00-1.5 0v1.5a.75.75 0 001.5 0v-1.5z"/><path d="M6.25 0a.75.75 0 000 1.5H7.5v1.62C4.095 3.69 1.5 6.59 1.5 10.12v1.38A2.5 2.5 0 004 14h8a2.5 2.5 0 002.5-2.5v-1.38c0-3.53-2.595-6.43-6-7V1.5h1.25a.75.75 0 000-1.5h-3.5zM3 10.12C3 7.37 5.24 5.12 8 5.12s5 2.25 5 5v1.38a1 1 0 01-1 1H4a1 1 0 01-1-1v-1.38z"/></svg> Battle-tested Feb&ndash;Apr 2026 &middot; 16 phases</span>
+      <span><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M5.75 7.5a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5a.75.75 0 01.75-.75zm5.25.75a.75.75 0 00-1.5 0v1.5a.75.75 0 001.5 0v-1.5z"/><path d="M6.25 0a.75.75 0 000 1.5H7.5v1.62C4.095 3.69 1.5 6.59 1.5 10.12v1.38A2.5 2.5 0 004 14h8a2.5 2.5 0 002.5-2.5v-1.38c0-3.53-2.595-6.43-6-7V1.5h1.25a.75.75 0 000-1.5h-3.5zM3 10.12C3 7.37 5.24 5.12 8 5.12s5 2.25 5 5v1.38a1 1 0 01-1 1H4a1 1 0 01-1-1v-1.38z"/></svg> Battle-tested Feb&ndash;Apr 2026 &middot; 17 phases</span>
     </div>
   </div>
 </section>
@@ -1504,6 +1505,169 @@ Agent Session (on demand)
  </table>
  </div>
  <div class="callout success"><strong>The key shift:</strong> Phases 1&ndash;15 made your agent intelligent and self-improving. Phase 16 makes it <em>operationally proactive</em> &mdash; it doesn't wait for you to ask, it manages your day.</div>
+ </div>
+ </div>
+</section>
+
+<!-- ═══════════════ PHASE 17 ═══════════════ -->
+<section class="phase" id="phase17">
+ <div class="phase-header" onclick="togglePhase(this)">
+ <div class="phase-number">17</div>
+ <div class="phase-title-block">
+ <div class="phase-title">Security Hardening &mdash; 6-Layer Defense</div>
+ <div class="phase-summary">Every untrusted input (X articles, web pages, email, chat) is a prompt injection surface. Six layers of defense, cheapest first, ~1,100 lines of bash.</div>
+ </div>
+ <div class="phase-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></div>
+ </div>
+ <div class="phase-body">
+ <div class="tags"><span class="tag">security</span><span class="tag">prompt-injection</span><span class="tag">sanitizer</span><span class="tag">redaction</span><span class="tag">governance</span></div>
+
+ <div class="callout warn">Inspired by Matthew Berman's "Teaching OpenClaw to not get Hacked" (1,542 bookmarks). <strong>No single check catches everything.</strong> Layers run cheapest first &mdash; most attacks die at Layer 1 (free, instant regex) and never reach Layer 2 (an LLM call).</div>
+
+ <div class="step">
+ <div class="step-label">Architecture</div>
+ <h4>6 layers, cheapest first</h4>
+ <div class="diagram">Untrusted input
+  → Layer 1: Text sanitization (regex, Unicode cleanup)     [free, instant]
+  → Layer 2: Frontier scanner (LLM risk scoring)             [$0.001/call]
+  → Layer 3: Outbound content gate (leak detection)           [free, instant]
+  → Layer 4: Redaction pipeline (PII, secrets)                [free, instant]
+  → Layer 5: Runtime governance (spend caps, loop detection)  [free, instant]
+  → Layer 6: Access control (path guards, URL safety)         [free, instant]</div>
+ </div>
+
+ <div class="step">
+ <div class="step-label">Layer 1 &mdash; Text Sanitizer</div>
+ <h4>Strips invisible attacks before any LLM sees the text</h4>
+ <div class="table-wrap">
+ <table>
+ <thead><tr><th>Attack Type</th><th>What It Does</th><th>Defense</th></tr></thead>
+ <tbody>
+ <tr><td>Invisible Unicode</td><td>Zero-width chars hide instructions between visible text</td><td>Strip all zero-width, RTL/LTR marks, soft hyphens, BOMs</td></tr>
+ <tr><td>HTML entities</td><td><code>&amp;#115;ystem</code> decodes to <code>system</code>, bypasses regex</td><td>Decode entities before pattern matching</td></tr>
+ <tr><td>Cyrillic lookalikes</td><td>аеорс look identical to Latin aeopc</td><td>Normalize to Latin equivalents</td></tr>
+ <tr><td>Role markers</td><td>"ignore previous", "system:", "admin mode"</td><td>Pattern match 20+ injection phrases, score each hit</td></tr>
+ <tr><td>Base64 blocks</td><td>Encoded hidden instructions</td><td>Detect long base64 strings</td></tr>
+ </tbody>
+ </table>
+ </div>
+ <div class="code-wrap">
+ <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z"/></svg> Copy</button></div>
+ <pre><code># Sanitize untrusted text:
+echo "untrusted content" | bash tools/security/sanitize.sh
+# Exit 0 = clean, Exit 1 = blocked
+# Stats to stderr: {"role_markers": 5, "total_score": 10, "blocked": true}</code></pre>
+ </div>
+ </div>
+
+ <div class="step">
+ <div class="step-label">Layer 2 &mdash; Frontier Scanner</div>
+ <h4>LLM-based semantic injection detection</h4>
+ <p>Uses a dedicated classifier model (not your agent). Returns structured risk score 0-100. Overrides model verdict if score contradicts it. Fail behavior configurable per source type.</p>
+ <div class="code-wrap">
+ <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z"/></svg> Copy</button></div>
+ <pre><code># email = fail closed (block on API error)
+echo "email body" | bash tools/security/frontier-scan.sh --source email
+
+# web = fail open (allow on API error)
+echo "web content" | bash tools/security/frontier-scan.sh --source web</code></pre>
+ </div>
+ </div>
+
+ <div class="step">
+ <div class="step-label">Layer 3 &mdash; Outbound Gate</div>
+ <h4>Catches leaked secrets before they leave the system</h4>
+ <p>Scans every outbound message (Telegram, WhatsApp, email) for API keys, internal paths, private IPs, exfiltration attempts via markdown images, and injection artifacts.</p>
+ </div>
+
+ <div class="step">
+ <div class="step-label">Layer 4 &mdash; Redaction Pipeline</div>
+ <h4>Auto-strips PII and secrets from outbound text</h4>
+ <div class="table-wrap">
+ <table>
+ <thead><tr><th>Pattern</th><th>Replacement</th></tr></thead>
+ <tbody>
+ <tr><td>API keys (sk-*, ghp_*, etc.)</td><td><code>[REDACTED_API_KEY]</code></td></tr>
+ <tr><td>Personal emails (gmail, yahoo)</td><td><code>[REDACTED_EMAIL]</code></td></tr>
+ <tr><td>Phone numbers</td><td><code>[REDACTED_PHONE]</code></td></tr>
+ <tr><td>SSN patterns</td><td><code>[REDACTED_SSN]</code></td></tr>
+ <tr><td>Credit card patterns</td><td><code>[REDACTED_CC]</code></td></tr>
+ </tbody>
+ </table>
+ </div>
+ </div>
+
+ <div class="step">
+ <div class="step-label">Layer 5 &mdash; Runtime Governance</div>
+ <h4>"Bugs burn more money than attacks"</h4>
+ <p>Cron overlaps, retry storms, and cursor bugs cost more than malicious attacks. The governor caps damage from all of them.</p>
+ <div class="table-wrap">
+ <table>
+ <thead><tr><th>Mechanism</th><th>Default</th><th>What It Catches</th></tr></thead>
+ <tbody>
+ <tr><td>Spend limit</td><td>$15/5min hard cap</td><td>Expensive loops, batch storms</td></tr>
+ <tr><td>Volume limit</td><td>200 calls/10min</td><td>Rapid-fire retry bugs</td></tr>
+ <tr><td>Lifetime counter</td><td>500 per process</td><td>Infinite loops, any cause</td></tr>
+ <tr><td>Duplicate detection</td><td>5min TTL cache</td><td>Restarts, scheduling overlaps</td></tr>
+ </tbody>
+ </table>
+ </div>
+ </div>
+
+ <div class="step">
+ <div class="step-label">Layer 6 &mdash; Access Control</div>
+ <h4>Path guards + URL safety</h4>
+ <div class="code-wrap">
+ <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z"/></svg> Copy</button></div>
+ <pre><code># Blocked:
+bash tools/security/access-control.sh check-path "~/.ssh/id_rsa"
+# {"allowed": false, "reason": "Matches deny filename: .ssh"}
+
+bash tools/security/access-control.sh check-url "http://192.168.1.1"
+# {"allowed": false, "reason": "Private IP (192.168.x)"}
+
+# Allowed:
+bash tools/security/access-control.sh check-path "/workspace/memory/projects.md"
+# {"allowed": true}
+
+bash tools/security/access-control.sh check-url "https://api.openai.com"
+# {"allowed": true}</code></pre>
+ </div>
+ </div>
+
+ <div class="step">
+ <div class="step-label">Master Gate</div>
+ <h4>Single entry point chaining Layer 1 + Layer 2</h4>
+ <div class="code-wrap">
+ <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z"/></svg> Copy</button></div>
+ <pre><code># Full gate (sanitize + LLM scan):
+echo "untrusted" | bash tools/security/gate.sh --source web
+
+# Sanitize only (skip scanner, faster):
+echo "untrusted" | bash tools/security/gate.sh --sanitize-only
+
+# For email (fail-closed on scanner error):
+echo "email" | bash tools/security/gate.sh --source email</code></pre>
+ </div>
+ </div>
+
+ <div class="step">
+ <div class="step-label">Benefits</div>
+ <h4>Before vs After</h4>
+ <div class="table-wrap">
+ <table>
+ <thead><tr><th>Before</th><th>After</th></tr></thead>
+ <tbody>
+ <tr><td>Untrusted X articles go straight to context</td><td>Sanitized first, role markers stripped</td></tr>
+ <tr><td>Outbound messages could leak credentials</td><td>Gate blocks API keys, paths, PII before send</td></tr>
+ <tr><td>No spend protection</td><td>$15/5min hard cap + volume + lifetime limits</td></tr>
+ <tr><td>Agent can read any file</td><td>Deny list blocks .env, .ssh, credentials</td></tr>
+ <tr><td>Agent can hit any URL</td><td>Private IPs blocked, only http/https</td></tr>
+ <tr><td>One failure = full compromise</td><td>6 independent layers, no single point of failure</td></tr>
+ </tbody>
+ </table>
+ </div>
+ <div class="callout success"><strong>Key principle:</strong> Each layer is independent. Sanitizer catches patterns. Scanner catches semantics. Governor caps damage if both fail. Outbound gate catches leaks in the other direction. No layer depends on another working correctly.</div>
  </div>
  </div>
 </section>
