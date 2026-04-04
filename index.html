@@ -149,7 +149,7 @@
 
   /* PHASE SECTION */
   .phase {
-    margin-bottom: 48px; opacity: 0; transform: translateY(24px);
+    margin-bottom: 48px; opacity: 1; transform: none;
     transition: opacity 0.5s ease, transform 0.5s ease;
     scroll-margin-top: 110px;
   }
@@ -1938,15 +1938,23 @@ window.addEventListener('scroll', () => {
 });
 
 // INTERSECTION OBSERVER (fade-in phases)
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
-    }
+// Phases default to visible via CSS. JS adds animation for capable browsers.
+if ('IntersectionObserver' in window) {
+  document.querySelectorAll('.phase').forEach(p => {
+    p.style.opacity = '0';
+    p.style.transform = 'translateY(24px)';
+    p.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
   });
-}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
-
-document.querySelectorAll('.phase').forEach(p => observer.observe(p));
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+  document.querySelectorAll('.phase').forEach(p => observer.observe(p));
+}
 
 // ACTIVE NAV LINK (grouped nav)
 const phaseNavLinks = document.querySelectorAll('.phase-nav a');
