@@ -1,6 +1,6 @@
 # OpenClaw Production Upgrades — Implementation Guide
 
-**17-phase guide that transforms a vanilla OpenClaw install into a self-improving, security-hardened, operationally proactive AI agent system.**
+**18-phase guide that transforms a vanilla OpenClaw install into a self-improving, security-hardened, knowledge-compounding AI agent system.**
 
 Built by Sardor Umarov. Working implementation at PFICO. Battle-testing since February 2026 — continuously evolving, so check back for the latest version.
 
@@ -39,6 +39,7 @@ A single-file interactive HTML guide (`index.html`) documenting every upgrade ma
 | 15 | Failure Traces & Meta-Agent Review | Intelligence | Root cause logging, generalizability scoring, weekly self-improvement loop |
 | 16 | Canonical Tasks, Daily Prep & Email Sweep | Operations | One task file, 6am prep cron, proactive Gmail triage with follow-up detection |
 | 17 | Security Hardening | Security | 6-layer prompt injection defense: sanitizer, LLM scanner, outbound gate, redaction, governance, access control |
+| 18 | LLM Wiki | Knowledge | Persistent compounding wiki: entity pages, concept pages, contradiction detection, knowledge lint (Karpathy pattern) |
 
 ## Security Layers (Phase 17)
 
@@ -55,7 +56,7 @@ A single-file interactive HTML guide (`index.html`) documenting every upgrade ma
 
 - **Interactive HTML** — Collapsible phase sections, dark/light theme toggle, scroll progress bar
 - **Copy buttons** — Per-phase copy (as markdown) and full guide copy for agentic ingestion
-- **Phase navigation** — Grouped sticky nav bar (Foundation → Automation → Knowledge → Build Quality → Intelligence → Operations → Security)
+- **Phase navigation** — Grouped sticky nav bar (Foundation → Automation → Knowledge → Build Quality → Intelligence → Operations → Security → Knowledge)
 - **Code blocks** — Syntax-highlighted with one-click copy for all bash commands, config files, and scripts
 - **Responsive** — Works on phone, tablet, and desktop
 - **Self-contained** — Single HTML file, no external dependencies, no build step
@@ -100,6 +101,7 @@ Click "Copy full guide as .md" in the hero section → paste into any AI chat or
 | Dashboard | AIO (React + Vite + Vercel) |
 | Monitoring | Forge meta-agent + trace analysis |
 | Security | 6-layer defense (sanitizer + LLM scanner + outbound gate + redaction + governance + access control) |
+| Knowledge Wiki | LLM-maintained persistent wiki with entity pages, concept pages, contradiction detection, lint (Karpathy pattern) |
 | Scheduling | OpenClaw cron system |
 
 ## Research Influences
@@ -109,16 +111,21 @@ Click "Copy full guide as .md" in the hero section → paste into any AI chat or
 - **clawchief** (Ryan Carson, 2026) — Canonical task list, daily prep cron, email sweep, proactive operations
 - **Anthropic Harness Design** — GAN-inspired build/verify separation for quality
 - **Berman Security Layers** (Matthew Berman, 2026) — 6-layer prompt injection defense, runtime governance, independent layer architecture
+- **Karpathy LLM Wiki** (Andrej Karpathy, 2026) — Persistent compounding wiki pattern, entity pages, contradiction detection, knowledge lint
 
 ## File Structure
 
 ```
 openclaw-guide/
-├── index.html    # The complete interactive guide (single file, 17 phases)
+├── index.html    # The complete interactive guide (single file, 18 phases)
 └── README.md     # This file
 ```
 
 ## Changelog
+
+### v3 (Apr 5, 2026)
+- Added Phase 18: LLM Wiki — Persistent Knowledge Base (Karpathy pattern)
+- Updated hero to 18 phases
 
 ### v2 (Apr 3, 2026)
 - Added Phase 16: Canonical Tasks, Daily Prep & Email Sweep
