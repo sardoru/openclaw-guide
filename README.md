@@ -1,6 +1,6 @@
 # OpenClaw Production Upgrades — Implementation Guide
 
-**18-phase guide that transforms a vanilla OpenClaw install into a self-improving, security-hardened, knowledge-compounding AI agent system.**
+**19-phase guide that transforms a vanilla OpenClaw install into a self-improving, security-hardened, knowledge-compounding AI agent system.**
 
 Built by Sardor Umarov. Working implementation at PFICO. Battle-testing since February 2026 — continuously evolving, so check back for the latest version.
 
@@ -40,6 +40,7 @@ A single-file interactive HTML guide (`index.html`) documenting every upgrade ma
 | 16 | Canonical Tasks, Daily Prep & Email Sweep | Operations | One task file, 6am prep cron, proactive Gmail triage with follow-up detection |
 | 17 | Security Hardening | Security | 6-layer prompt injection defense: sanitizer, LLM scanner, outbound gate, redaction, governance, access control |
 | 18 | LLM Wiki | Knowledge | Persistent compounding wiki: entity pages, concept pages, contradiction detection, knowledge lint (Karpathy pattern) |
+| 19 | Intent Router, Campaigns & Cost Tracking | Efficiency | 4-tier routing (60-70% zero-token), campaign persistence, per-project spend, consent registry |
 
 ## Security Layers (Phase 17)
 
@@ -117,15 +118,18 @@ Click "Copy full guide as .md" in the hero section → paste into any AI chat or
 
 ```
 openclaw-guide/
-├── index.html    # The complete interactive guide (single file, 18 phases)
+├── index.html    # The complete interactive guide (single file, 19 phases)
 └── README.md     # This file
 ```
 
 ## Changelog
 
-### v3 (Apr 5, 2026)
+### v4 (Apr 6, 2026)
+### v4 (Apr 6, 2026)
+- Added Phase 19: Intent Router, Campaign Persistence, Cost Tracking, Consent Registry
+- Cost tracking page added to AIO Dashboard
 - Added Phase 18: LLM Wiki — Persistent Knowledge Base (Karpathy pattern)
-- Updated hero to 18 phases
+- Updated hero to 19 phases
 
 ### v2 (Apr 3, 2026)
 - Added Phase 16: Canonical Tasks, Daily Prep & Email Sweep

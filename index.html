@@ -436,13 +436,14 @@
  <a href="#phase16" data-phases="phase16">Operations</a>
  <a href="#phase17" data-phases="phase17">Security</a>
  <a href="#phase18" data-phases="phase18">Knowledge</a>
+ <a href="#phase19" data-phases="phase19">Efficiency</a>
   </div>
 </div>
 
 <!-- HERO -->
 <section class="hero">
   <h1>From Goldfish to <span class="accent">Self-Improving</span> Assistant</h1>
-  <p class="subtitle">18 phases that transform a vanilla OpenClaw install into a self-improving, security-hardened, knowledge-compounding agent system &mdash; persistent memory, episodic learning, failure traces, multi-agent builds, daily task prep, email triage, 6-layer security, and a persistent LLM wiki.</p>
+  <p class="subtitle">19 phases that transform a vanilla OpenClaw install into a self-improving, security-hardened, knowledge-compounding agent system &mdash; persistent memory, episodic learning, failure traces, multi-agent builds, daily task prep, email triage, 6-layer security, and a persistent LLM wiki.</p>
 
   <div class="hero-points">
     <div class="hero-point">
@@ -496,7 +497,7 @@
     </div>
     <div class="hero-meta">
       <span><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 110 16A8 8 0 018 0zm.5 4.5a.5.5 0 00-1 0v4a.5.5 0 00.25.43l2.5 1.5a.5.5 0 10.5-.86L8.5 8.14V4.5z"/></svg> ~6 weeks build</span>
-      <span><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M5.75 7.5a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5a.75.75 0 01.75-.75zm5.25.75a.75.75 0 00-1.5 0v1.5a.75.75 0 001.5 0v-1.5z"/><path d="M6.25 0a.75.75 0 000 1.5H7.5v1.62C4.095 3.69 1.5 6.59 1.5 10.12v1.38A2.5 2.5 0 004 14h8a2.5 2.5 0 002.5-2.5v-1.38c0-3.53-2.595-6.43-6-7V1.5h1.25a.75.75 0 000-1.5h-3.5zM3 10.12C3 7.37 5.24 5.12 8 5.12s5 2.25 5 5v1.38a1 1 0 01-1 1H4a1 1 0 01-1-1v-1.38z"/></svg> Battle-testing since Feb 2026 &middot; 18 phases</span>
+      <span><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M5.75 7.5a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5a.75.75 0 01.75-.75zm5.25.75a.75.75 0 00-1.5 0v1.5a.75.75 0 001.5 0v-1.5z"/><path d="M6.25 0a.75.75 0 000 1.5H7.5v1.62C4.095 3.69 1.5 6.59 1.5 10.12v1.38A2.5 2.5 0 004 14h8a2.5 2.5 0 002.5-2.5v-1.38c0-3.53-2.595-6.43-6-7V1.5h1.25a.75.75 0 000-1.5h-3.5zM3 10.12C3 7.37 5.24 5.12 8 5.12s5 2.25 5 5v1.38a1 1 0 01-1 1H4a1 1 0 01-1-1v-1.38z"/></svg> Battle-testing since Feb 2026 &middot; 19 phases</span>
     </div>
   </div>
 </section>
@@ -1775,6 +1776,69 @@ bash tools/wiki/lint.sh</code></pre>
  </table>
  </div>
  <div class="callout success"><strong>The human's job:</strong> curate sources, direct analysis, ask good questions. <strong>The agent's job:</strong> everything else &mdash; summarizing, cross-referencing, filing, and bookkeeping.</div>
+ </div>
+ </div>
+</section>
+
+<!-- ═══════════════ PHASE 19 ═══════════════ -->
+<section class="phase" id="phase19">
+ <div class="phase-header" onclick="togglePhase(this)">
+ <div class="phase-number">19</div>
+ <div class="phase-title-block">
+ <div class="phase-title">Intent Router, Campaigns &amp; Cost Tracking</div>
+ <div class="phase-summary">Stop wasting tokens on routine operations. A 4-tier router resolves 60-70% of requests at zero cost. Campaign persistence prevents re-explaining. Cost tracking makes spend visible.</div>
+ </div>
+ <div class="phase-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></div>
+ </div>
+ <div class="phase-body">
+ <div class="tags"><span class="tag">routing</span><span class="tag">campaigns</span><span class="tag">cost-tracking</span><span class="tag">consent</span><span class="tag">efficiency</span></div>
+
+ <div class="callout">Inspired by Citadel (Seth Gammon). Most requests don't need a full LLM round-trip to classify. Route cheapest first.</div>
+
+ <div class="step">
+ <div class="step-label">Intent Router</div>
+ <h4>Four tiers, cheapest first</h4>
+ <div class="table-wrap">
+ <table>
+ <thead><tr><th>Tier</th><th>Method</th><th>Cost</th><th>Catches</th></tr></thead>
+ <tbody>
+ <tr><td>1</td><td>Regex</td><td>0 tokens</td><td><code>git</code>, <code>ls</code>, <code>cat</code>, <code>qmd</code>, <code>bash tools/*</code></td></tr>
+ <tr><td>2</td><td>Campaign state</td><td>0 tokens</td><td>"continue", "resume" when mid-campaign</td></tr>
+ <tr><td>3</td><td>Skill keywords</td><td>0 tokens</td><td>"weather", "retro", "mail", "wiki", "episode"</td></tr>
+ <tr><td>4</td><td>LLM</td><td>~500 tokens</td><td>Everything else (normal path)</td></tr>
+ </tbody>
+ </table>
+ </div>
+ </div>
+
+ <div class="step">
+ <div class="step-label">Campaign Persistence</div>
+ <h4>Multi-session work that survives compaction</h4>
+ <div class="code-wrap">
+ <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z"/></svg> Copy</button></div>
+ <pre><code>bash tools/campaigns/campaign.sh start --name "AIO V3" --project aio
+bash tools/campaigns/campaign.sh checkpoint --note "Clock done, starting meetings"
+bash tools/campaigns/campaign.sh decide "Used canvas for rendering"
+# Close laptop. Come back tomorrow.
+bash tools/campaigns/campaign.sh resume  # Full context loads</code></pre>
+ </div>
+ </div>
+
+ <div class="step">
+ <div class="step-label">Cost Tracking + Consent</div>
+ <h4>Know what things cost. Control what the agent can do.</h4>
+ <div class="table-wrap">
+ <table>
+ <thead><tr><th>Tool</th><th>Purpose</th></tr></thead>
+ <tbody>
+ <tr><td><code>track.sh daily</code></td><td>Today + last 7 days spend</td></tr>
+ <tr><td><code>track.sh project aio</code></td><td>Per-project total</td></tr>
+ <tr><td><code>track.sh total</code></td><td>All-time summary</td></tr>
+ <tr><td><code>consent check.sh send_email</code></td><td>Check if action is allowed</td></tr>
+ </tbody>
+ </table>
+ </div>
+ <p style="font-size:13px;color:var(--text-muted);">Consent levels: <strong>auto-allow</strong> (read/create files) → <strong>session-allow</strong> (git push, deploy) → <strong>ask</strong> (send email) → <strong>always-ask</strong> (delete files)</p>
  </div>
  </div>
 </section>
