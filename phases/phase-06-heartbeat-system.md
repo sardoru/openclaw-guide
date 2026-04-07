@@ -1,10 +1,10 @@
-# OpenClaw Production Upgrades — Phase 10
+# OpenClaw Production Upgrades — Phase 6
 
-## Phase 10: Heartbeat System
+## Phase 6: Heartbeat System
 
 Heartbeats are periodic check-ins (default every 30 min). Instead of just replying "HEARTBEAT_OK", make them productive.
 
-### 10.1 HEARTBEAT.md
+### 6.1 HEARTBEAT.md
 
 ```markdown
 # HEARTBEAT.md
@@ -27,7 +27,7 @@ Heartbeats are periodic check-ins (default every 30 min). Instead of just replyi
   shared-context/agent-outputs/general/YYYY-MM-DD-daily-summary.md
 ```
 
-### 10.2 heartbeat-state.json
+### 6.2 heartbeat-state.json
 
 Track what's been checked to avoid redundant work:
 

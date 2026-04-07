@@ -1,6 +1,6 @@
 # OpenClaw Production Upgrades — Implementation Guide
 
-**19-phase guide that transforms a vanilla OpenClaw install into a self-improving, security-hardened, knowledge-compounding AI agent system.**
+**14-phase guide (+ appendices) that transforms a vanilla OpenClaw install into a self-improving, security-hardened, knowledge-compounding AI agent system.**
 
 Built by Sardor Umarov. Working implementation at Exchange Building. Battle-testing since February 2026 — continuously evolving, so check back for the latest version.
 
@@ -15,34 +15,58 @@ A single-file interactive HTML guide (`index.html`) documenting every upgrade ma
 - Learns from its own failures (episodic memory + failure traces + meta-review)
 - Manages your day before you wake up (task prep, email triage, calendar sync)
 - Builds software with quality gates (multi-agent GAN-inspired harness)
-- Scans physical mail with AI vision (OCR categorization pipeline)
 - Defends against prompt injection with 6 independent security layers
 
 ## Phases
 
-| # | Phase | Category | What It Does |
-|---|-------|----------|-------------|
-| 1 | Memory & Persistence | Foundation | Identity files, daily journals, crash recovery, long-term memory index |
-| 2 | Vector Memory | Foundation | FAISS/QMD semantic search — find memories by meaning, not keywords |
-| 3 | Hourly Summarizer + Context Injection | Foundation | Auto-capture session activity, compile briefings for session start |
-| 4 | Shared Brain | Foundation | Multi-agent coordination via shared-context directory |
-| 5 | Cron Jobs | Automation | Scheduled tasks: summaries, morning briefs, memory cleanup, ops audits |
-| 6 | Monitoring & Observability (Forge) | Automation | Meta-agent watches other agents, catches failures, tracks patterns |
-| 7 | Cross-Agent Synthesis (Roundtable) | Automation | Entity extraction + cross-agent pattern detection |
-| 8 | Weekly Memory Compound | Automation | Distill weekly logs into clean summaries |
-| 9 | Obsidian as Second Brain | Knowledge | URL → transcribe → extract claims → structured vault notes |
-| 10 | Heartbeat System | Knowledge | Proactive 30-min housekeeping: reindex, check decisions, backfill logs |
-| 11 | Custom Skills | Knowledge | Teach new capabilities via SKILL.md instruction files |
-| 12 | GAN-Inspired Build Harness | Build Quality | Planner → Generator → Evaluator with hard pass/fail criteria |
-| 13 | Agentic Memory Architecture | Intelligence | Episodic memory, importance scoring, decay-weighted recall, auto-consolidation |
-| 14 | Physical Mail Intake *(Optional)* | Intelligence | Camera → OCR → auto-categorize physical mail into digital shelves |
-| 15 | Failure Traces & Meta-Agent Review | Intelligence | Root cause logging, generalizability scoring, weekly self-improvement loop |
-| 16 | Canonical Tasks, Daily Prep & Email Sweep | Operations | One task file, 6am prep cron, proactive Gmail triage with follow-up detection |
-| 17 | Security Hardening | Security | 6-layer prompt injection defense: sanitizer, LLM scanner, outbound gate, redaction, governance, access control |
-| 18 | LLM Wiki | Knowledge | Persistent compounding wiki: entity pages, concept pages, contradiction detection, knowledge lint (Karpathy pattern) |
-| 19 | Intent Router, Campaigns & Cost Tracking | Efficiency | 4-tier routing (60-70% zero-token), campaign persistence, per-project spend, consent registry |
+### Tier 1: Foundation
 
-## Security Layers (Phase 17)
+| # | Phase | What It Does |
+|---|-------|-------------|
+| 1 | Memory & Persistence | Identity files, daily journals, crash recovery, long-term memory index |
+| 2 | Vector Memory & Semantic Search | FAISS/QMD semantic search — find memories by meaning, not keywords |
+| 3 | Shared Brain & Multi-Agent Coordination | Multi-agent coordination via shared-context directory |
+
+### Tier 2: Automation & Ops
+
+| # | Phase | What It Does |
+|---|-------|-------------|
+| 4 | Cron Jobs & Scheduling | Scheduled tasks: summaries, morning briefs, memory cleanup, ops audits |
+| 5 | Memory Compaction Pipeline (Hourly + Weekly) | Auto-capture session activity, compile briefings, distill weekly summaries |
+| 6 | Heartbeat System | Proactive 30-min housekeeping: reindex, check decisions, backfill logs |
+| 7 | Monitoring, Failure Analysis & Meta-Review | Meta-agent watches agents, catches failures, tracks patterns, root cause logging, weekly self-improvement loop |
+
+### Tier 3: Knowledge
+
+| # | Phase | What It Does |
+|---|-------|-------------|
+| 8 | Knowledge Base: Ingest, Wiki & Obsidian | URL-to-knowledge pipeline + persistent compounding wiki (Karpathy pattern) + Obsidian integration |
+| 9 | Cross-Agent Synthesis (Roundtable) | Entity extraction + cross-agent pattern detection |
+
+### Tier 4: Intelligence & Quality
+
+| # | Phase | What It Does |
+|---|-------|-------------|
+| 10 | Custom Skills | Teach new capabilities via SKILL.md instruction files |
+| 11 | GAN-Inspired Build Harness | Planner → Generator → Evaluator with hard pass/fail criteria |
+| 12 | Agentic Memory Architecture | Episodic memory, importance scoring, decay-weighted recall, auto-consolidation |
+
+### Tier 5: Hardening & Integration
+
+| # | Phase | What It Does |
+|---|-------|-------------|
+| 13 | Canonical Tasks, Daily Prep & Email Sweep | One task file, 6am prep cron, proactive Gmail triage with follow-up detection |
+| 14 | Security Hardening | 6-layer prompt injection defense + consent registry: sanitizer, LLM scanner, outbound gate, redaction, governance, access control |
+
+### Appendices
+
+| # | Section | What It Does |
+|---|---------|-------------|
+| A | Physical Mail Intake *(Optional)* | Camera → OCR → auto-categorize physical mail into digital shelves |
+| B | Intent Router, Campaigns & Cost Tracking | 4-tier routing (60-70% zero-token), campaign persistence, per-project spend |
+| Ref | Reference Appendix | Cron schedule, file map, cost expectations, skill files |
+
+## Security Layers (Phase 14)
 
 | Layer | Name | Cost | What It Catches |
 |-------|------|------|----------------|
@@ -57,7 +81,7 @@ A single-file interactive HTML guide (`index.html`) documenting every upgrade ma
 
 - **Interactive HTML** — Collapsible phase sections, dark/light theme toggle, scroll progress bar
 - **Copy buttons** — Per-phase copy (as markdown) and full guide copy for agentic ingestion
-- **Phase navigation** — Grouped sticky nav bar (Foundation → Automation → Knowledge → Build Quality → Intelligence → Operations → Security → Knowledge)
+- **Phase navigation** — Grouped sticky nav bar (Foundation → Automation & Ops → Knowledge → Intelligence & Quality → Hardening & Integration)
 - **Code blocks** — Syntax-highlighted with one-click copy for all bash commands, config files, and scripts
 - **Responsive** — Works on phone, tablet, and desktop
 - **Self-contained** — Single HTML file, no external dependencies, no build step
@@ -95,9 +119,8 @@ Click "Copy full guide as .md" in the hero section → paste into any AI chat or
 | LLM (direct chat) | Claude Opus 4.6 |
 | LLM (background crons) | Claude Sonnet 4.6 |
 | Vector Search | QMD (BM25 + embeddings) |
-| Knowledge Base | Obsidian vault + markdown files |
+| Knowledge Base | Obsidian vault + markdown files + LLM Wiki |
 | Task Management | `tasks/current.md` canonical file |
-| Mail OCR | OpenAI GPT-4o Vision API |
 | Calendar Sync | iCal/Google Calendar URL import |
 | Dashboard | AIO (React + Vite + Vercel) |
 | Monitoring | Forge meta-agent + trace analysis |
@@ -118,13 +141,16 @@ Click "Copy full guide as .md" in the hero section → paste into any AI chat or
 
 ```
 openclaw-guide/
-├── index.html    # The complete interactive guide (single file, 19 phases)
-└── README.md     # This file
+├── index.html                             # The complete interactive guide (single file, 14 phases + appendices)
+├── openclaw-production-upgrades-full.md   # Full guide in markdown
+└── README.md                              # This file
 ```
 
 ## Changelog
 
-### v4 (Apr 6, 2026)
+### v5 (Apr 6, 2026)
+- Restructured from 19 phases to 14 phases + appendices. Merged: 3+8 (Memory Compaction), 6+15 (Monitoring & Failure Analysis), 9+18 (Knowledge Base). Rebalanced from 8 categories to 5 tiers.
+
 ### v4 (Apr 6, 2026)
 - Added Phase 19: Intent Router, Campaign Persistence, Cost Tracking, Consent Registry
 - Cost tracking page added to AIO Dashboard

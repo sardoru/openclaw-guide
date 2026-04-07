@@ -1,10 +1,10 @@
-# OpenClaw Production Upgrades — Phase 4
+# OpenClaw Production Upgrades — Phase 3
 
-## Phase 4: Shared Brain (Multi-Agent Coordination)
+## Phase 3: Shared Brain (Multi-Agent Coordination)
 
 If you run multiple cron jobs or sub-agents, they need a shared context plane.
 
-### 4.1 Directory Structure
+### 3.1 Directory Structure
 
 ```
 shared-context/
@@ -21,7 +21,7 @@ shared-context/
     └── latest.md
 ```
 
-### 4.2 Priorities File
+### 3.2 Priorities File
 
 `shared-context/priorities.md` — maintain this yourself:
 
@@ -41,7 +41,7 @@ shared-context/
 - **Status:** [status]
 ```
 
-### 4.3 Feedback Logger — `tools/feedback-logger.py`
+### 3.3 Feedback Logger — `tools/feedback-logger.py`
 
 ```python
 #!/usr/bin/env python3
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     log_feedback(sys.argv[1], sys.argv[2], sys.argv[3])
 ```
 
-### 4.4 Daily Summaries for Cross-Agent Visibility
+### 3.4 Daily Summaries for Cross-Agent Visibility
 
 Add this instruction to AGENTS.md (or to your heartbeat):
 

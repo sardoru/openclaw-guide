@@ -1,36 +1,36 @@
-# OpenClaw Production Upgrades — Phase 16
+# OpenClaw Production Upgrades — Phase 13
 
-## Phase 16: Canonical Task List, Daily Prep & Email Sweep
+## Phase 13: Canonical Task List, Daily Prep & Email Sweep
 
 Inspired by Ryan Carson's clawchief system (4,800+ bookmarks) — the insight that transformed his OpenClaw from a reactive chatbot into a chief of staff: *"I didn't get the world's best assistant by asking better questions. I got it by giving it a better operating system."*
 
 This phase adds three things: a single source of truth for tasks, a cron that preps your day before you wake up, and an email triage system.
 
-### 16.1 Canonical Task List (`tasks/current.md`)
+### 13.1 Canonical Task List (`tasks/current.md`)
 
 Stop scattering tasks across daily logs, Obsidian, chat history, and your head. One file. Four sections.
 
 ```markdown
 # Tasks — Single Source of Truth
 
-## 🔴 Today
+## Today
 - [ ] Review Exchange Building lease renewal
 - [ ] Test AIO calendar sync with Google Calendar
 - [ ] Reply to Murray Wells re: contractor walkthrough
 
-## 📅 This Week
+## This Week
 - [ ] VerdictAI: Define product scope with Arslan
 - [ ] Set up GOG for Gmail integration
 - [ ] Wire real Obsidian data into AIO production
 
-## 📋 Backlog
+## Backlog
 - [ ] AIO: Pi camera mail automation (Phase 2)
 - [ ] Building OS: Deploy and pilot with Exchange STR units
 - [ ] Marina: Slip pricing model
 
-## ✅ Done (Recent)
+## Done (Recent)
 - [x] AIO Dashboard — full build + deploy
-- [x] Phase 13-15 memory architecture upgrade
+- [x] Phase 12 memory architecture upgrade
 - [x] Calendar sync (iCal, Google, file upload)
 ```
 
@@ -49,7 +49,7 @@ Update it when tasks complete or new ones appear.
 Daily prep cron runs at 6am to promote due items and deduplicate.
 ```
 
-### 16.2 Daily Task Prep Cron
+### 13.2 Daily Task Prep Cron
 
 A script that runs before you wake up, so your day is ready when you check in.
 
@@ -72,7 +72,7 @@ TASK_FILE="$WORKSPACE/tasks/current.md"
 # Backup
 cp "$TASK_FILE" "$WORKSPACE/tasks/archive/current-$(date +%Y-%m-%d).md"
 
-# Promote due items (items in Backlog with dates ≤ today)
+# Promote due items (items in Backlog with dates <= today)
 # Deduplicate (find identical task text across sections)
 # Archive done items on Mondays
 # Report summary
@@ -93,7 +93,7 @@ openclaw cron add \
 
 Why Sonnet: this is mechanical work, doesn't need Opus. Saves ~80% on this cron.
 
-### 16.3 Email Sweep Skill
+### 13.3 Email Sweep Skill
 
 The most requested "chief of staff" feature: proactive inbox triage.
 
@@ -105,13 +105,13 @@ The sweep runs every 15 minutes and does:
 
 1. **Search** for unread emails since last sweep
 2. **Score** each email by priority:
-   - 🔴 **Urgent** — Known contacts, "urgent"/"asap", financial/legal, calendar invites → Telegram notification immediately
-   - 🟡 **Important** — Known contacts, project-related, replies to active threads → included in sweep summary
-   - 🟢 **Low** — Newsletters, marketing, automated notifications → skip
-   - ⚫ **Ignore** — Spam, promotions, receipts → skip entirely
+   - **Urgent** — Known contacts, "urgent"/"asap", financial/legal, calendar invites → Telegram notification immediately
+   - **Important** — Known contacts, project-related, replies to active threads → included in sweep summary
+   - **Low** — Newsletters, marketing, automated notifications → skip
+   - **Ignore** — Spam, promotions, receipts → skip entirely
 3. **Detect follow-ups needed** — outbound emails >24h with no reply
 4. **Add action items** to `tasks/current.md` when emails require a response
-5. **Respect quiet hours** — 11pm–7am: urgent only. Weekends: 2 sweeps/day.
+5. **Respect quiet hours** — 11pm-7am: urgent only. Weekends: 2 sweeps/day.
 
 **Contact priority list** (`tools/email-sweep/contacts.json`):
 ```json
@@ -124,20 +124,20 @@ The sweep runs every 15 minutes and does:
 
 **Output format:**
 ```
-📬 Email Sweep — 3:15 PM
+Email Sweep — 3:15 PM
 
-🔴 URGENT (1):
+URGENT (1):
 - From: Murray Wells — "Lease renewal deadline Friday"
   → Action: Review and sign
 
-🟡 IMPORTANT (2):
+IMPORTANT (2):
 - From: Arslan — "VerdictAI product scope"
 - From: GitHub — PR review on sardoru/aio
 
-⏳ FOLLOW-UPS (1):
+FOLLOW-UPS (1):
 - No reply from Contractor re: "Walkthrough scheduling" (2 days)
 
-📊 Skipped: 12 newsletters, 3 promos
+Skipped: 12 newsletters, 3 promos
 ```
 
 **Cron setup (activate after GOG):**
@@ -163,7 +163,7 @@ openclaw cron add \
 }
 ```
 
-### 16.4 Integration
+### 13.4 Integration
 
 All three systems feed into each other:
 
@@ -188,7 +188,7 @@ Agent Session (on demand)
   └─ Adds new tasks from conversations
 ```
 
-### 16.5 Benefits Analysis
+### 13.5 Benefits Analysis
 
 | Before | After | Impact |
 |--------|-------|--------|
@@ -198,6 +198,6 @@ Agent Session (on demand)
 | Follow-ups forgotten | Agent tracks unanswered outbound >24h | Relationships maintained, nothing drops |
 | Passive agent waits for instructions | Proactive agent manages your operational reality | Agent shifts from tool to chief of staff |
 
-**The key shift:** Phases 1–15 made your agent intelligent and self-improving. Phase 16 makes it *operationally proactive* — it doesn't wait for you to ask, it manages your day.
+**The key shift:** Phases 1-12 made your agent intelligent and self-improving. Phase 13 makes it *operationally proactive* — it doesn't wait for you to ask, it manages your day.
 
 ---

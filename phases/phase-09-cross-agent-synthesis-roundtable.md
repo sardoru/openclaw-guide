@@ -1,10 +1,10 @@
-# OpenClaw Production Upgrades — Phase 7
+# OpenClaw Production Upgrades — Phase 9
 
-## Phase 7: Cross-Agent Synthesis (Roundtable)
+## Phase 9: Cross-Agent Synthesis (Roundtable)
 
 The roundtable script reads all agent outputs from the last 24 hours, extracts entities (people, companies, tickers, countries), detects cross-agent themes, and writes a daily synthesis.
 
-### 7.1 Roundtable — `tools/roundtable.py`
+### 9.1 Roundtable — `tools/roundtable.py`
 
 Key features of the roundtable:
 - Scans `shared-context/agent-outputs/` and recent `memory/` files

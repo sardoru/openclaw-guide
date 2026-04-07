@@ -1,10 +1,10 @@
-# OpenClaw Production Upgrades — Phase 5
+# OpenClaw Production Upgrades — Phase 4
 
-## Phase 5: Cron Jobs
+## Phase 4: Cron Jobs & Scheduling
 
 This is where the system comes alive. Cron jobs are OpenClaw's native scheduled tasks — they run as isolated sessions on a schedule.
 
-### 5.1 Core Crons
+### 4.1 Core Crons
 
 Set these up via `openclaw cron add`:
 
@@ -40,7 +40,7 @@ openclaw cron add \
   --task "Run: python3 /path/to/workspace/tools/weekly-compound.py"
 ```
 
-### 5.2 Morning Brief (optional but powerful)
+### 4.2 Morning Brief (optional but powerful)
 
 A daily briefing cron that researches and delivers a personalized morning update:
 
@@ -53,7 +53,7 @@ openclaw cron add \
   --task "Research and deliver a morning brief covering: [your topics — crypto, markets, geopolitics, AI news, etc.]. Search the web for the latest. Send the brief to the user via Telegram."
 ```
 
-### 5.3 Cost Optimization for Crons
+### 4.3 Cost Optimization for Crons
 
 **Critical:** Route all background crons to a cheaper model. Direct conversations use your best model (e.g., Opus), but crons should use Sonnet:
 

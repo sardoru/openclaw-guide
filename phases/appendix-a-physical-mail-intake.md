@@ -1,10 +1,8 @@
-# OpenClaw Production Upgrades — Phase 14
+# Appendix A: Physical Mail Intake Pipeline *(Optional)*
 
-## Phase 14: Physical Mail Intake Pipeline *(Optional)*
+> **This appendix is optional.** It adds a physical-to-digital mail scanning and categorization system. If you don't need physical mail management, skip this entirely.
 
-> **This phase is optional.** It adds a physical-to-digital mail scanning and categorization system. If you don't need physical mail management, skip to the closing notes. Want this feature? Read on.
-
-Most productivity systems stop at the digital boundary. But physical mail — bills, legal notices, insurance, tax documents — still arrives in paper form and creates its own backlog. This phase bridges the gap: a camera-based scanning system that ingests physical mail into your agent's workflow with automatic OCR categorization.
+Most productivity systems stop at the digital boundary. But physical mail — bills, legal notices, insurance, tax documents — still arrives in paper form and creates its own backlog. This appendix bridges the gap: a camera-based scanning system that ingests physical mail into your agent's workflow with automatic OCR categorization.
 
 ### What It Does
 
@@ -15,7 +13,7 @@ Most productivity systems stop at the digital boundary. But physical mail — bi
 5. **Archives** scan images and logs entries to an Obsidian-compatible markdown file
 6. **Tracks** unpaid amounts, due dates, and action-needed status across all mail
 
-### 14.1 Mail Intake Store
+### A.1 Mail Intake Store
 
 Add these types to your app's state management (example uses Zustand):
 
@@ -50,7 +48,7 @@ export interface MailItem {
 
 Persist `mailItems` to local storage so the shelf state survives refreshes.
 
-### 14.2 OCR Module
+### A.2 OCR Module
 
 Create a server-side module that calls OpenAI Vision to extract structured data from mail photos:
 
@@ -108,7 +106,7 @@ export async function analyzeMailImage(
 }
 ```
 
-### 14.3 Ingestion API Endpoint
+### A.3 Ingestion API Endpoint
 
 Add a POST endpoint to your server:
 
@@ -129,9 +127,9 @@ The endpoint should:
 - Append to an Obsidian-compatible markdown log (`mail-log.md`)
 - Return the structured result for client-side review
 
-### 14.4 Camera Upload UI
+### A.4 Camera Upload UI
 
-Build a scan button that opens the phone’s rear camera:
+Build a scan button that opens the phone's rear camera:
 
 ```html
 <input type="file" accept="image/*" capture="environment" />
@@ -144,7 +142,7 @@ The flow:
 4. OCR results shown in a **review modal** — user can adjust any field
 5. On confirm → item added to mail shelf store
 
-### 14.5 Category Shelves UI
+### A.5 Category Shelves UI
 
 Build a visual shelf organizer with drag-and-drop between categories:
 
@@ -154,7 +152,7 @@ Build a visual shelf organizer with drag-and-drop between categories:
 - Filter by category and status
 - Responsive: phone gets single-column stacked shelves, desktop gets 3-4 column grid
 
-### 14.6 Phase 2 — Hardware Automation (Future)
+### A.6 Hardware Automation (Future)
 
 Once the software pipeline works with manual phone photos, you can automate with:
 
@@ -164,9 +162,9 @@ Once the software pipeline works with manual phone photos, you can automate with
 - Runs the same `/api/mail/ingest` endpoint
 - Agent sends Telegram notification: "New mail from AT&T — $142.50 bill due Apr 15"
 
-### 14.7 Integration with OpenClaw
+### A.7 Integration with OpenClaw
 
-Wire mail events into your agent’s awareness:
+Wire mail events into your agent's awareness:
 
 - **Heartbeat check**: scan `mailItems` for overdue bills (status = action-needed, dueDate < today)
 - **Daily summary**: include mail stats (new items, unpaid total)

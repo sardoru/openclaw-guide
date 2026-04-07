@@ -1,12 +1,12 @@
-# OpenClaw Production Upgrades — Phase 12
+# OpenClaw Production Upgrades — Phase 11
 
-## Phase 12: GAN-Inspired Build Harness (Planner → Generator → Evaluator)
+## Phase 11: GAN-Inspired Build Harness (Planner → Generator → Evaluator)
 
 Single-agent builds have a ceiling. The agent builds something, evaluates its own work, praises it, and ships broken code. This phase adds a multi-agent architecture inspired by [Anthropic's harness research](https://www.anthropic.com/engineering/harness-design-long-running-apps) that separates building from judging — the same insight behind Generative Adversarial Networks.
 
 **The core problem:** LLMs are terrible at evaluating their own work. They find bugs, then talk themselves into deciding they're not a big deal. They approve stubbed features. They call mediocre design "clean and modern." Separating the builder from the critic is the single biggest quality lever.
 
-### 12.1 Architecture
+### 11.1 Architecture
 
 ```
 ┌─────────┐     spec.md      ┌───────────┐    eval-request.md    ┌───────────┐
@@ -25,7 +25,7 @@ Three agents, three roles:
 
 All communication happens via files in a `.harness/` directory. One agent writes, another reads. Simple, debuggable, crash-recoverable.
 
-### 12.2 The Evaluator — Calibrated Skepticism
+### 11.2 The Evaluator — Calibrated Skepticism
 
 The evaluator scores against 4 weighted criteria:
 
@@ -36,7 +36,7 @@ The evaluator scores against 4 weighted criteria:
 | Craft | 20% | 6/10 | Font scale, spacing base unit, WCAG contrast, hover/focus states |
 | Functionality | 25% | 7/10 | Every button works (not just logs), forms submit, data persists |
 
-**Overall pass:** ALL criteria meet minimum AND weighted average ≥ 6.0.
+**Overall pass:** ALL criteria meet minimum AND weighted average >= 6.0.
 
 The evaluator uses the browser (Playwright) to interact with the live app — it doesn't just read code. It clicks every button, fills every form, checks console after each action, and tests edge cases (empty states, overflow, mobile viewport at 375px).
 
@@ -55,7 +55,7 @@ These are baked into the evaluator's prompt to fight the natural tendency toward
 These patterns auto-deduct 3 points from the Originality score:
 
 - Purple/violet/indigo gradient backgrounds
-- The 3-column feature grid (icon-in-circle + bold title + 2-line description × 3)
+- The 3-column feature grid (icon-in-circle + bold title + 2-line description x 3)
 - Icons in colored circles as decoration
 - Everything center-aligned
 - Uniform bubbly border-radius on all elements
@@ -75,7 +75,7 @@ Out of the box, an LLM evaluator is too generous. Calibrate with few-shot exampl
 
 Include 3-5 such examples in the evaluator's prompt covering lenient, calibrated, and over-harsh behaviors.
 
-### 12.3 The Planner — $0.50 That Saves Hours
+### 11.3 The Planner — $0.50 That Saves Hours
 
 The planner takes a short prompt and produces a full product spec. This is the highest-ROI component — 5 minutes and $0.50 of planning prevents hours of building the wrong thing.
 
@@ -90,7 +90,7 @@ Output: `.harness/spec.md` (product spec) + `.harness/design-language.md` (visua
 
 **Critical:** Present the spec to the human for review before building. This is the checkpoint.
 
-### 12.4 Sprint Contracts
+### 11.4 Sprint Contracts
 
 Before each chunk of work, the generator and evaluator negotiate what "done" looks like:
 
@@ -105,7 +105,7 @@ Before each chunk of work, the generator and evaluator negotiate what "done" loo
 
 This prevents the generator from building the wrong thing or stubbing features. The contract is what the evaluator scores against — not vibes, not the spec's vague user stories.
 
-### 12.5 Sprint vs Continuous Mode
+### 11.5 Sprint vs Continuous Mode
 
 **Sprint Mode** (for Sonnet-class models or complex builds):
 - Decompose spec into 5-15 sprints
@@ -122,7 +122,7 @@ This prevents the generator from building the wrong thing or stubbing features. 
 
 *Note:* Anthropic found that context resets (full clean slate + structured handoff) outperform compaction for Sonnet-class models, which exhibit "context anxiety" — prematurely wrapping up as the context window fills. Opus 4.6 handles long context natively, making continuous mode viable.
 
-### 12.6 File-Based Communication
+### 11.6 File-Based Communication
 
 All inter-agent communication happens via files:
 
@@ -147,7 +147,7 @@ Why files instead of function calls or chat:
 - **Crash-recoverable:** If an agent dies, the files survive for the next session
 - **Auditable:** Full paper trail of every decision and score
 
-### 12.7 Implementation Options
+### 11.7 Implementation Options
 
 #### Option A: Manual Orchestration (Main Session)
 
@@ -222,7 +222,7 @@ Each agent gets personality files (`AGENTS.md`, `SOUL.md`) that encode their rol
 
 > "You are the person who finds the thing everyone else missed. You're not mean — you're honest. There's a difference. When you see a beautiful landing page, you appreciate it. Then you click the signup button and check if it actually works."
 
-### 12.8 The Numbers
+### 11.8 The Numbers
 
 From Anthropic's benchmarks:
 
@@ -234,7 +234,7 @@ From Anthropic's benchmarks:
 
 The harness is 10-20x more expensive. The output is categorically different — not incrementally better, but the difference between "core feature doesn't work" and "everything works, and it looks good."
 
-### 12.9 The Key Principle
+### 11.9 The Key Principle
 
 > "Every component in a harness encodes an assumption about what the model can't do on its own. Those assumptions are worth stress testing, both because they may be incorrect, and because they can quickly go stale as models improve."
 

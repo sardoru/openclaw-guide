@@ -1,10 +1,14 @@
-# OpenClaw Production Upgrades — Phase 3
+# OpenClaw Production Upgrades — Phase 5
 
-## Phase 3: Hourly Summarizer + Context Injection
+## Phase 5: Memory Compaction Pipeline (Hourly + Weekly)
 
-These two scripts work together: the summarizer captures what happened each hour, and the context injector compiles recent context into a single file that survives session compaction.
+Raw memory files grow fast. Without compaction, your agent drowns in context. This phase builds a two-stage pipeline: hourly summarization captures what happened in near-real-time, and weekly compounding distills those summaries into durable knowledge. Together they keep your agent's context fresh without losing signal.
 
-### 3.1 Hourly Summarizer — `tools/hourly-summarizer.py`
+### Stage 1: Hourly Summarizer + Context Injection
+
+Two scripts work together: the summarizer captures what happened each hour, and the context injector compiles recent context into a single file that survives session compaction.
+
+#### 5.1 Hourly Summarizer — `tools/hourly-summarizer.py`
 
 This script reads recent OpenClaw session transcripts and writes structured hourly summaries:
 
@@ -89,7 +93,7 @@ if __name__ == '__main__':
         print("No active session found.")
 ```
 
-### 3.2 Context Injector — `tools/context-injector.py`
+#### 5.2 Context Injector — `tools/context-injector.py`
 
 Compiles recent hourly summaries, priorities, and active tasks into a single `CONTEXT_INJECTION.md` that the agent reads on session start:
 
@@ -151,5 +155,47 @@ def compile_context():
 if __name__ == '__main__':
     compile_context()
 ```
+
+### Stage 2: Weekly Memory Compound
+
+Runs Sunday night. Distills the week's daily logs, hourly summaries, and feedback into a concise weekly summary — the second compression stage in the pipeline.
+
+#### 5.3 Weekly Compound — `tools/weekly-compound.py`
+
+Core logic:
+- Reads all `memory/YYYY-MM-DD.md` files from the past 7 days
+- Reads `shared-context/feedback/` for the week
+- Reads hourly summaries
+- Writes a distilled `memory/weekly/YYYY-WXX.md`
+- Optionally updates MEMORY.md with significant learnings
+
+```bash
+openclaw cron add \
+  --name "weekly-memory-compound" \
+  --every "0 22 * * 0" \
+  --tz "America/Chicago" \
+  --model "anthropic/claude-sonnet-4-6" \
+  --task "Run: python3 /path/to/workspace/tools/weekly-compound.py. Then review the output and update MEMORY.md if there are significant learnings worth keeping long-term."
+```
+
+### 5.4 The Full Pipeline
+
+The two stages form a natural compression pipeline:
+
+```
+Session transcripts (raw, unbounded)
+  → Hourly summaries (every :55, last 20 messages → ~1 page)
+    → Context injection (last 4 hourly summaries → CONTEXT_INJECTION.md)
+      → Weekly compound (Sunday 10 PM → memory/weekly/YYYY-WXX.md)
+        → MEMORY.md (significant learnings promoted to long-term memory)
+```
+
+Each stage compresses further:
+- **Hourly:** ~20 messages → 1 page of bullets
+- **Context injection:** Last 4 hours → single file for boot
+- **Weekly:** 7 days of logs + hourly + feedback → 1-2 page summary
+- **MEMORY.md:** Significant learnings only → permanent index
+
+This means your agent always has fresh context (hourly), recent history (context injection), and durable knowledge (weekly + MEMORY.md) — without the context window filling up with raw transcripts.
 
 ---

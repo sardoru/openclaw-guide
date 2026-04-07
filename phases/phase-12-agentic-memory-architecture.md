@@ -1,8 +1,8 @@
-# OpenClaw Production Upgrades — Phase 13
+# OpenClaw Production Upgrades — Phase 12
 
-## Phase 13: Agentic Memory Architecture
+## Phase 12: Agentic Memory Architecture
 
-Phases 1–12 gave your agent memory. This phase makes it *intelligent* memory.
+Phases 1–11 gave your agent memory. This phase makes it *intelligent* memory.
 
 Inspired by research on agentic memory systems (Park et al. *Generative Agents*, 2023), this phase upgrades your memory from simple storage to a curated, self-improving knowledge system with four layers: in-context, external, episodic, and semantic. The result: your agent stops re-learning old lessons, recalls *how* it solved similar problems, and automatically prunes stale context.
 
@@ -15,9 +15,9 @@ Inspired by research on agentic memory systems (Park et al. *Generative Agents*,
 | Episodic | Task outcomes, approaches, lessons | memory/episodes/ (NEW) |
 | Semantic | World knowledge | Model weights (parametric) — supplemented by web search |
 
-Phases 1–4 built the first two layers. Phase 13 adds episodic memory with importance scoring, decay-weighted recall, and automated consolidation — turning your flat file memory into a self-curating knowledge system.
+Phases 1–3 built the first two layers. Phase 12 adds episodic memory with importance scoring, decay-weighted recall, and automated consolidation — turning your flat file memory into a self-curating knowledge system.
 
-### 13.1 Episodic Memory System
+### 12.1 Episodic Memory System
 
 Episodic memory records *what happened, what worked, and what didn't* — structured task outcomes your agent can recall next time it faces something similar.
 
@@ -61,7 +61,7 @@ Field reference:
 | `approach` | Yes | Step-by-step what was tried |
 | `outcome` | Yes | `success`, `partial`, `failure` |
 | `lesson` | Yes | The takeaway — what future-you should know |
-| `importance` | Yes | 1-10 score (see §13.2) |
+| `importance` | Yes | 1-10 score (see section 12.2) |
 | `related_files` | No | Links to daily notes, decisions, etc. |
 | `decay_anchor` | Yes | Timestamp for recency scoring |
 
@@ -113,7 +113,7 @@ cat > "$EPISODE_DIR/$ID.json" << EOF
 }
 EOF
 
-echo "✅ Episode logged: $EPISODE_DIR/$ID.json"
+echo "Episode logged: $EPISODE_DIR/$ID.json"
 ```
 
 In practice, the agent creates episodes directly by writing JSON. The script is for manual logging or cron-based extraction.
@@ -129,7 +129,7 @@ After completing any significant task (debugging, feature build, research, key d
 
 1. Write an episode file to `memory/episodes/ep-YYYY-MM-DD-short-desc.json`
 2. Follow the episode schema (see tools/episodes/README.md)
-3. Score importance honestly (see §13.2 heuristic)
+3. Score importance honestly (see section 12.2 heuristic)
 4. Include the actual lesson — not a platitude
 
 Bad lesson: "Always test before deploying"
@@ -158,7 +158,7 @@ def load_episodes(episode_dir):
             with open(f) as fh:
                 episodes.append(json.load(fh))
         except (json.JSONDecodeError, KeyError) as e:
-            print(f"⚠️  Skipping {f}: {e}", file=sys.stderr)
+            print(f"Skipping {f}: {e}", file=sys.stderr)
     return episodes
 
 def text_relevance(query, episode):
@@ -182,14 +182,14 @@ def recency_score(episode, half_life_days=30):
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     age_days = (now - dt).total_seconds() / 86400
-    return math.exp(-0.693 * age_days / half_life_days)  # ln(2) ≈ 0.693
+    return math.exp(-0.693 * age_days / half_life_days)  # ln(2) = 0.693
 
 def importance_score(episode):
     """Normalize importance to 0-1 range."""
     return min(max(episode.get('importance', 5), 1), 10) / 10.0
 
 def weighted_score(query, episode):
-    """Combined score: relevance × 0.4 + importance × 0.3 + recency × 0.3"""
+    """Combined score: relevance x 0.4 + importance x 0.3 + recency x 0.3"""
     rel = text_relevance(query, episode)
     imp = importance_score(episode)
     rec = recency_score(episode)
@@ -217,7 +217,7 @@ if __name__ == '__main__':
 
     for ep, score in results:
         print(f"\n{'='*60}")
-        print(f"📎 {ep['title']} (score: {score:.2f}, importance: {ep['importance']}/10)")
+        print(f"{ep['title']} (score: {score:.2f}, importance: {ep['importance']}/10)")
         print(f"   Type: {ep['task_type']} | Outcome: {ep['outcome']}")
         print(f"   Context: {ep['context'][:200]}")
         print(f"   Lesson: {ep['lesson']}")
@@ -254,21 +254,21 @@ for f in "$EPISODE_DIR"/*.json; do
   echo "" >> "$INDEX_FILE"
 done
 
-echo "✅ Indexed $(ls "$EPISODE_DIR"/*.json 2>/dev/null | wc -l | tr -d ' ') episodes → $INDEX_FILE"
+echo "Indexed $(ls "$EPISODE_DIR"/*.json 2>/dev/null | wc -l | tr -d ' ') episodes → $INDEX_FILE"
 
 # Now re-index with QMD
 qmd index memory/episodes/
 ```
 
-Run this after logging episodes, or wire it into a cron job (see §13.5).
+Run this after logging episodes, or wire it into a cron job (see section 12.5).
 
-### 13.2 Importance Scoring
+### 12.2 Importance Scoring
 
 Not every task deserves an episode. Importance scoring acts as a **write gate** — filtering noise before it enters your episodic memory.
 
 #### The Heuristic Scorer
 
-Importance is scored 1–10 based on five signals:
+Importance is scored 1-10 based on five signals:
 
 | Signal | Weight | Description |
 |--------|--------|-------------|
@@ -282,11 +282,11 @@ Importance is scored 1–10 based on five signals:
 
 | Task | Nov | Imp | Reu | Dif | Sur | Total | Log? |
 |------|-----|-----|-----|-----|-----|-------|------|
-| Fixed nginx config after upgrade | 2 | 2 | 2 | 1 | 1 | **8** | ✅ |
-| Changed button color per request | 0 | 0 | 0 | 0 | 0 | **0** | ❌ |
-| Discovered QMD timeout causes silent failures | 2 | 3 | 2 | 2 | 1 | **10** | ✅ |
-| Routine daily summary | 0 | 1 | 0 | 0 | 0 | **1** | ❌ |
-| New cron pattern for batch processing | 1 | 2 | 2 | 1 | 0 | **6** | ✅ |
+| Fixed nginx config after upgrade | 2 | 2 | 2 | 1 | 1 | **8** | Yes |
+| Changed button color per request | 0 | 0 | 0 | 0 | 0 | **0** | No |
+| Discovered QMD timeout causes silent failures | 2 | 3 | 2 | 2 | 1 | **10** | Yes |
+| Routine daily summary | 0 | 1 | 0 | 0 | 0 | **1** | No |
+| New cron pattern for batch processing | 1 | 2 | 2 | 1 | 0 | **6** | Yes |
 
 #### Write Gate
 
@@ -304,31 +304,31 @@ Before logging an episode, score importance using the 5-signal heuristic:
 
 This keeps your episode store lean. After a month of active use, you should have 30-60 episodes, not 300. Quality over quantity.
 
-### 13.3 Decay-Weighted Recall
+### 12.3 Decay-Weighted Recall
 
 Raw keyword search returns episodes by relevance alone. But a perfectly relevant episode from 6 months ago about a since-deprecated API is noise. Decay-weighted recall balances three signals:
 
 #### The Scoring Formula
 
 ```
-final_score = (relevance × 0.4) + (importance × 0.3) + (recency × 0.3)
+final_score = (relevance x 0.4) + (importance x 0.3) + (recency x 0.3)
 ```
 
 Where:
-- **Relevance (0–1):** Keyword overlap or vector cosine similarity between query and episode text
-- **Importance (0–1):** Episode importance score normalized (divide by 10)
-- **Recency (0–1):** Exponential decay with configurable half-life
+- **Relevance (0-1):** Keyword overlap or vector cosine similarity between query and episode text
+- **Importance (0-1):** Episode importance score normalized (divide by 10)
+- **Recency (0-1):** Exponential decay with configurable half-life
 
 ```
-recency = e^(-0.693 × age_days / half_life_days)
+recency = e^(-0.693 x age_days / half_life_days)
 ```
 
 With a 30-day half-life:
 - Today's episode: recency = 1.0
-- 1 week old: recency ≈ 0.85
+- 1 week old: recency ~ 0.85
 - 30 days old: recency = 0.5
-- 90 days old: recency ≈ 0.125
-- 180 days old: recency ≈ 0.016
+- 90 days old: recency ~ 0.125
+- 180 days old: recency ~ 0.016
 
 This means a 6-month-old episode needs to be *extremely* relevant and important to surface. Which is exactly what you want.
 
@@ -379,7 +379,7 @@ For the agent, add this to the AGENTS.md semantic recall step:
    b. `python3 tools/episodes/recall.py "TOPIC" --top 3` (NEW — episodic memory)
 ```
 
-### 13.4 Automated Consolidation
+### 12.4 Automated Consolidation
 
 Episodic memory grows. Without maintenance, it fills with duplicates, stale entries, and near-identical lessons. Consolidation keeps it sharp.
 
@@ -501,7 +501,7 @@ if __name__ == '__main__':
     actions = consolidate(args.episode_dir, args.archive_days, args.dry_run)
     
     if not actions:
-        print("✨ No consolidation needed.")
+        print("No consolidation needed.")
     else:
         prefix = "[DRY RUN] " if args.dry_run else ""
         for action in actions:
@@ -511,7 +511,7 @@ if __name__ == '__main__':
 
 #### Merge Strategy
 
-When two episodes have >60% combined similarity (lesson × 0.6 + context × 0.4):
+When two episodes have >60% combined similarity (lesson x 0.6 + context x 0.4):
 
 1. **Keep the higher-importance episode** as the base
 2. **Merge unique tags** from the duplicate
@@ -526,9 +526,9 @@ Episodes older than 180 days with importance < 6 get archived automatically. The
 - **Low-importance old episodes decay naturally** — routine fixes, temporary workarounds, context that's no longer relevant
 - **Archived episodes aren't deleted** — they're moved to `memory/episodes/archive/` and excluded from active recall, but still searchable if you need them
 
-### 13.5 Integration with Existing Systems
+### 12.5 Integration with Existing Systems
 
-Wire episodic memory into the systems you already have running from Phases 1–12.
+Wire episodic memory into the systems you already have running from Phases 1-11.
 
 #### AGENTS.md Updates
 
@@ -541,7 +541,7 @@ Add to your boot sequence (after the existing step 7):
 
 ### Episodic Memory
 
-After completing significant tasks (importance ≥ 5):
+After completing significant tasks (importance >= 5):
 - Write episode to `memory/episodes/ep-YYYY-MM-DD-short-desc.json`
 - Score importance honestly: Novelty(0-2) + Impact(0-3) + Reusability(0-2) + Difficulty(0-2) + Surprise(0-1)
 - Include specific, actionable lessons — not platitudes
@@ -590,7 +590,7 @@ openclaw cron add \
   --channel telegram
 ```
 
-#### Integration with Phase 3 (Hourly Summarizer)
+#### Integration with Phase 5 (Memory Compaction Pipeline)
 
 Your hourly summarizer already scans recent activity. Add episode extraction to it:
 
@@ -598,13 +598,13 @@ Your hourly summarizer already scans recent activity. Add episode extraction to 
 # Add to your hourly summarizer prompt:
 
 After generating the hourly summary, check if any tasks in this hour
-qualify for episodic memory (importance ≥ 5). If so, generate the
+qualify for episodic memory (importance >= 5). If so, generate the
 episode JSON and write it to memory/episodes/.
 ```
 
 This creates a natural pipeline: work happens → hourly summarizer captures it → significant tasks get promoted to episodic memory → consolidation keeps the store clean.
 
-#### Integration with Phase 10 (Retros)
+#### Integration with Retros
 
 Retros are a natural source of high-importance episodes. After running a retro:
 
@@ -612,15 +612,15 @@ Retros are a natural source of high-importance episodes. After running a retro:
 # Add to your retro skill:
 
 After completing the retro, extract 1-3 top lessons and log them as
-episodes with importance ≥ 7. Retro-sourced episodes should have
+episodes with importance >= 7. Retro-sourced episodes should have
 task_type: "decision" and tag: "retro".
 ```
 
-### 13.6 Benefits Analysis
+### 12.6 Benefits Analysis
 
 Concrete improvements from implementing agentic memory:
 
-| Dimension | Before (Phases 1-12) | After (Phase 13) | Improvement |
+| Dimension | Before (Phases 1-11) | After (Phase 12) | Improvement |
 |-----------|---------------------|-------------------|-------------|
 | **Lesson retention** | Lessons in daily notes, rarely re-read | Structured episodes with active recall | Agent recalls *how* it solved similar problems |
 | **Context window efficiency** | All memory loaded equally | Importance + decay filtering | 40-60% reduction in irrelevant context |
@@ -629,7 +629,7 @@ Concrete improvements from implementing agentic memory:
 | **Decision quality** | Decisions based on current context only | Past outcomes inform new decisions | Compound learning across sessions |
 | **Noise ratio** | Every task noted equally in daily files | Write gate filters low-importance events | Episode store stays lean (30-60 active vs 300+ daily entries) |
 
-**The key shift:** Phases 1–12 gave your agent *storage*. Phase 13 gives it *judgment* about what to store, *intelligence* about what to recall, and *discipline* about what to forget.
+**The key shift:** Phases 1-11 gave your agent *storage*. Phase 12 gives it *judgment* about what to store, *intelligence* about what to recall, and *discipline* about what to forget.
 
 A well-tuned episodic memory system means your agent gets meaningfully better at its job over time — not just because the model improves, but because *your specific agent* accumulates experience that persists across sessions, models, and even platform upgrades.
 
